@@ -24,6 +24,7 @@ HEADERS +=  Debug.h \
             frmruninfo.h \
             frmdetails.h \
             frmdbtag.h \
+            frmsavetags.h \
             frmtrends.h \
             frmsource.h \
             frmtkmap.h \
@@ -61,6 +62,7 @@ FORMS +=    uifiles/frmcommissioner.ui \
             uifiles/frmfedmap.ui \
             uifiles/frmdetails.ui \
             uifiles/frmdbtag.ui \
+            uifiles/frmsavetags.ui \
             uifiles/frmsource.ui \
             uifiles/frmtrends.ui \
             uifiles/frmterminal.ui \

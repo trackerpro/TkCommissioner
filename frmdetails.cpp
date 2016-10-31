@@ -2,6 +2,7 @@
 #include "frmtrends.h"
 #include "frmsource.h"
 #include "frmdbtag.h"
+#include "frmsavetags.h"
 
 #include <QtSql/QSqlQuery>
 #include <QtSql/QSqlError>
@@ -296,10 +297,13 @@ void SelectionDetails::on_btnShowTaggedAll_clicked() {
 }
 
 void SelectionDetails::on_btnAddTag_clicked() {
-    /*
     TagCreator* tagger = new TagCreator();
     tagger->show();
-    */
+}
+
+void SelectionDetails::on_btnTagSelected_clicked() {
+    TagUpload* tagger = new TagUpload();
+    tagger->show();
 }
 
 void SelectionDetails::on_btnShowSource_clicked() {

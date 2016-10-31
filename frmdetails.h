@@ -30,6 +30,7 @@ class SelectionDetails : public QConnectedTabWidget, private Ui::SelectionDetail
         void on_btnShowAllSelected_clicked();
         void on_btnShowTaggedAll_clicked();
         void on_btnAddTag_clicked();
+        void on_btnTagSelected_clicked();
         void on_btnShowSource_clicked();
         void on_btnShowTrend_clicked();
 
