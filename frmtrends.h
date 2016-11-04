@@ -32,7 +32,7 @@ class Trends : public QConnectedTabWidget, private Ui::Trends {
             selView->setModel(selModel);
             selView->horizontalHeader()->setResizeMode(QHeaderView::Stretch);
             
-            connect(selModel, SIGNAL(currentRowChanged(QModelIndex,QModelIndex)), this, SLOT(focusChanged(QModelIndex,QModelIndex)));
+            connect(selView->selectionModel(), SIGNAL(currentRowChanged(QModelIndex,QModelIndex)), this, SLOT(focusChanged(QModelIndex,QModelIndex)));
             connect(selModel, SIGNAL(itemChanged(QStandardItem*))               , this, SLOT(updateGraphs(QStandardItem*)));
         }
         ~Trends() {
