@@ -94,7 +94,6 @@ bool TreeBuilder::buildTree(const QString& filename, const QString &analysisType
 
         std::stringstream myQuery;
         myQuery << getQuery( qPrintable(analysisType) );
-        if(Debug::Inst()->getEnabled()) qDebug() << myQuery;
         tree = new TTree("DBTree","DBTree");      
         fillTree(tree, qPrintable(analysisType), myQuery.str(), analysisId.toInt() );
         tree->Write();
@@ -151,10 +150,10 @@ QString TreeBuilder::loadAnalysis(const QRunId& pair, bool useCache) {
         if(Debug::Inst()->getEnabled()) qDebug() << qPrintable(myQuery);
         
         QSqlQuery query;
-	query.prepare(myQuery);
-	query.addBindValue(pair.first);
-	query.addBindValue(pair.second);
-	query.exec();
+        query.prepare(myQuery);
+        query.addBindValue(pair.first);
+        query.addBindValue(pair.second);
+        query.exec();
         int resultCounter = 0;
         while (query.next()) {
             analysisId    = query.value(0).toString();
@@ -204,25 +203,25 @@ void TreeBuilder::fillTree(TTree* tree, std::string runType, const std::string& 
     myQueryStruct2.setExtendedQuery(runType);
      
       
-    QVector<std::pair<QString, Base_Type*> >::const_iterator it = myQueryStruct2.query.begin(), itEnd = myQueryStruct2.query.end();    
+    QVector<std::pair<std::string, Base_Type*> >::const_iterator it = myQueryStruct2.query.begin(), itEnd = myQueryStruct2.query.end();    
       
     for(; it != itEnd; ++it) {
-        const char* branchstr = qPrintable(it->first);
-        if(Debug::Inst()->getEnabled()) qDebug() << "Booking branch " << it->first << " of type ";
+        const char* branchstr = it->first.c_str();
+        QString bookingstr = QString("Booking branch ") + QString(branchstr) + QString(" of type ");
         
         Double*  d = dynamic_cast<Double*>(it->second);
         Integer* i = dynamic_cast<Integer*>(it->second);
         String*  s = dynamic_cast<String*>(it->second);
         if(d != NULL) {
-            if(Debug::Inst()->getEnabled()) qDebug() << "double";
+            if(Debug::Inst()->getEnabled()) qDebug() << qPrintable(bookingstr) << "double";
             tree->Branch(branchstr, &(d->value),Form("%s/%s", branchstr, "D"));
         } 
         else if(i != NULL) {
-            if(Debug::Inst()->getEnabled()) qDebug() << "integer";
+            if(Debug::Inst()->getEnabled()) qDebug() << qPrintable(bookingstr) << "integer";
             tree->Branch(branchstr, &(i->value),Form("%s/%s", branchstr, "i"));
         } 
         else if(s != NULL) {
-            if(Debug::Inst()->getEnabled()) qDebug() << "string";
+            if(Debug::Inst()->getEnabled()) qDebug() << qPrintable(bookingstr) << "string";
             tree->Branch(branchstr, (&(s->value)),8000,0);
         } 
         else {
@@ -242,8 +241,7 @@ void TreeBuilder::fillTree(TTree* tree, std::string runType, const std::string& 
     
 }
 
-
-std::string TreeBuilder::getQuery(const std::string & analysisType) {
+std::string TreeBuilder::getQuery(const QString& analysisType) {
     std::stringstream myBasicQuery;
     myBasicQuery << "select distinct "
                  << "TKF.DETECTOR      Detector,"
@@ -429,7 +427,35 @@ std::string TreeBuilder::getQuery(const std::string & analysisType) {
                 << "       THEN BASELINESLOP2"
                 << "     WHEN GAIN=3"
                 << "       THEN BASELINESLOP3"
-                << " END SELECTEDBASELINESLOP"
+                << " END SELECTEDBASELINESLOP,"
+                << " CASE"
+                << "     WHEN BASELINESLOP0<0.1"
+                << "       THEN -1"
+                << "     WHEN TICKHEIGHT0=65535"
+                << "       THEN -1"
+                << "     ELSE TICKHEIGHT0/BASELINESLOP0"
+                << " END NORMTICK0,"
+                << " CASE"
+                << "     WHEN BASELINESLOP1<0.1"
+                << "       THEN -1"
+                << "     WHEN TICKHEIGHT1=65535"
+                << "       THEN -1"
+                << "     ELSE TICKHEIGHT1/BASELINESLOP1"
+                << " END NORMTICK1,"
+                << " CASE"
+                << "     WHEN BASELINESLOP2<0.1"
+                << "       THEN -1"
+                << "     WHEN TICKHEIGHT2=65535"
+                << "       THEN -1"
+                << "     ELSE TICKHEIGHT2/BASELINESLOP2"
+                << " END NORMTICK2,"
+                << " CASE"
+                << "     WHEN BASELINESLOP3<0.1"
+                << "       THEN -1"
+                << "     WHEN TICKHEIGHT3=65535"
+                << "       THEN -1"
+                << "     ELSE TICKHEIGHT3/BASELINESLOP3"
+                << " END NORMTICK3"
                 << " from"
                 << " ANALYSISOPTOSCAN AOS join"
                 << " ANALYSIS on AOS.ANALYSISID = ANALYSIS.ANALYSISID join"
@@ -565,9 +591,10 @@ std::string TreeBuilder::getQuery(const std::string & analysisType) {
 
 
     else {
-        if(Debug::Inst()->getEnabled()) qDebug() << "Unknown analysistype";
+        if(Debug::Inst()->getEnabled()) qDebug() << "Unknown analysistype " << analysisType;
     }
 
+    if(Debug::Inst()->getEnabled()) qDebug() << "\nTreeBuilder Query : \n" << myQuery.str().c_str() << "\n";
     return myQuery.str();
 }
 

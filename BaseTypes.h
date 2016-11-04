@@ -3,12 +3,12 @@
 
 // There is no good implementation of std::make_pair in Qt. So I am sticking with the standard C++ container here
 #include <vector>
+#include <string>
 
 // Qt includes
 #include <QtSql/QSqlQuery>
 #include <QVariant>
 #include <QVector>
-#include <QString>
 
 // ROOT includes
 #include <TObjString.h>
@@ -120,7 +120,7 @@ struct Integer : public Base_Type {
  */
 struct BaseQuery {
     
-    QVector<std::pair<QString, Base_Type* > > query;
+    QVector<std::pair<std::string, Base_Type* > > query;
     
     BaseQuery() {
         query.push_back(std::make_pair("Detector"       , new String() ) );
@@ -149,7 +149,7 @@ struct BaseQuery {
         query.push_back(std::make_pair("lasChan"        , new Double() ) );  
     }
     
-    void setExtendedQuery(std::string runType) {
+    void setExtendedQuery(const std::string& runType) {
         if(runType == "TIMING") {
             query.push_back(std::make_pair("DeviceId"   , new Double() ) );
             query.push_back(std::make_pair("FedId"      , new Double() ) );
@@ -211,6 +211,10 @@ struct BaseQuery {
             query.push_back(std::make_pair("Baselineslop2",       new Double() ) );
             query.push_back(std::make_pair("Baselineslop3",       new Double() ) );
             query.push_back(std::make_pair("SelectedBaselineslop",new Double() ) );
+            query.push_back(std::make_pair("NormTick0",           new Double() ) );
+            query.push_back(std::make_pair("NormTick1",           new Double() ) );
+            query.push_back(std::make_pair("NormTick2",           new Double() ) );
+            query.push_back(std::make_pair("NormTick3",           new Double() ) );
         } 
         else if(runType == "VPSPSCAN") {
             query.push_back(std::make_pair("DeviceId",      new Double() ) );
@@ -280,7 +284,6 @@ struct BaseQuery {
             query.push_back(std::make_pair("RawMinENC",        new Double() ) );
             query.push_back(std::make_pair("IsValid",          new Double() ) );
         } 
-        if (Debug::Inst()->getEnabled()) qDebug() << "Unknown analysis type ";
     }
 
 };

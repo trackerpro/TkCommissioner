@@ -116,7 +116,7 @@ class TreeBuilder {
          * get the query to retrieve information for a given run type and a
          * given analysis id
          */
-        std::string getQuery(const std::string & runType);
+        std::string getQuery(const QString& runType);
   
 };
 #endif
