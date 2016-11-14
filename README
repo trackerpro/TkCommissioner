@@ -5,6 +5,7 @@ This is the updated version of the TkCommissioner tool used for the commissionin
 
 Brief highlights of new features : 
 - Improved channel selection in plots
+- Ability to choose a different run type as a reference run
 - Interactive tracker map
 - FED map
 - Trends plot
