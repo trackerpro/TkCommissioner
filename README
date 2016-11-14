@@ -2,3 +2,9 @@ TkCommissioner v2.0
 -------------------
 
 This is the updated version of the TkCommissioner tool used for the commissioning of the CMS silicon strip tracker.
+
+Brief highlights of new features : 
+- Improved channel selection in plots
+- Interactive tracker map
+- FED map
+- Trends plot
