@@ -160,7 +160,7 @@ void SelectionDetails::populate(TTree* tree, const QVector<int>& sel, const QStr
         QStandardItem* iCcuArrangement = new QStandardItem(QString::number(CcuArrangement));
         QStandardItem* iI2CChannel     = new QStandardItem(QString::number(I2CChannel));
         QStandardItem* iI2CAddress     = new QStandardItem(QString::number(I2CAddress));
-        QStandardItem* ilasChan        = new QStandardItem(QString::number(lasChan));
+        QStandardItem* ilasChan        = new QStandardItem(QString::number(lasChan+1.0));
         QStandardItem* iFedId          = new QStandardItem(QString::number(FedId));
         QStandardItem* iFeUnit         = new QStandardItem(QString::number(FeUnit));
         QStandardItem* iFeChan         = new QStandardItem(QString::number(FeChan));
@@ -318,7 +318,7 @@ void SelectionDetails::on_btnShowSource_clicked() {
                 selModel->item(i, 6 )->text().toInt(),
                 selModel->item(i, 7 )->text().toInt(),
                 selModel->item(i, 9 )->text().toInt(),
-                selModel->item(i, 11)->text().toInt()+1,
+                selModel->item(i, 11)->text().toInt(),
                 selModel->item(i, 10)->text().toInt()
             );
             SiStripFedKey fedkey(
