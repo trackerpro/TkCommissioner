@@ -8,5 +8,5 @@ Brief highlights of new features :
 - Ability to plot the current and last O2O'ed states
 - Ability to choose a different run type as a reference run
 - Interactive tracker map
-- FED map
+- FED map with the ability to select FEDs and perform a selective upload
 - Trends plot
