@@ -101,7 +101,7 @@ public:
     /**
      * constructor passing name and possibly parent
      */ 
-    View(const QString &name, QWidget *parent = 0);
+    View(const QString &name, QWidget *parent = 0, double minv = 2.0, double maxv = 6.0);
     /**
      * return pointer to graphics view associated with this frame
      */ 

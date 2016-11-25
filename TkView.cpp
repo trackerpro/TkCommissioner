@@ -89,7 +89,7 @@ void GraphicsView::wheelEvent(QWheelEvent *e) {
     else QGraphicsView::wheelEvent(e);
 }
 
-View::View(const QString &, QWidget *parent)
+View::View(const QString &, QWidget *parent, double minv, double maxv)
     : QFrame(parent)
 {
     setFrameStyle(Sunken | StyledPanel);
@@ -163,10 +163,14 @@ View::View(const QString &, QWidget *parent)
 
     sbMin = new QDoubleSpinBox;
     sbMax = new QDoubleSpinBox;
-    sbMin->setValue(2.0);
-    sbMax->setValue(6.0);
-    sbMin->setSingleStep (0.25);
-    sbMax->setSingleStep (0.25);
+    if (minv >= maxv) {
+        minv = 2.0;
+        maxv = 6.0;
+    }        
+    sbMin->setValue(minv);
+    sbMax->setValue(maxv);
+    sbMin->setSingleStep ((maxv-minv)/25.);
+    sbMax->setSingleStep ((maxv-minv)/25.);
 
     QButtonGroup *pointerModeGroup = new QButtonGroup;
     pointerModeGroup->setExclusive(true);

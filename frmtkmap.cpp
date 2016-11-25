@@ -93,7 +93,7 @@ TkMap::TkMap(QConnectedTabWidget *parent, TTree* tree, const QVector<int>& sm, c
     populateScene();
     
     srand ( time(NULL) );
-    view = new View("Top left view");
+    view = new View("Top left view", NULL, rangeMin_, rangeMax_);
     view->view()->setScene(scene);
         
     
