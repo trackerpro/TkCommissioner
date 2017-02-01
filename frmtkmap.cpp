@@ -40,8 +40,6 @@
 ****************************************************************************/
 
 #include "frmtkmap.h"
-#include "cmssw/SiStripFecKey.h"
-#include "cmssw/SiStripFedKey.h"
 #include "TkView.h"
 #include "Chip.h"
 
@@ -75,39 +73,37 @@ inline const char* getColor(float value, float maxvalue, float minvalue)
 
 
 
-TkMap::TkMap(QConnectedTabWidget *parent, TTree* tree, const QVector<int>& sm, const QString& vName, float min, float max, const QString& run)
+TkMap::TkMap(QConnectedTabWidget *parent, TTree* tree, TEventList* eventList, const QString& vName, float min, float max)
   : QConnectedTabWidget(parent),
     tree_(tree),
+    eventList_(eventList),
     varName_(vName),
     rangeMin_(min),
-    rangeMax_(max),
-    run_(run)
+    rangeMax_(max)
 {
-    smap.clear();
-    for (int i = 0; i < sm.size(); i++) smap.push_back(sm[i]);    
+  if( tree_ == NULL ) {
+    std::cerr << "Input tree to the TkMap is NULL" << std::endl;
+    return;
+  }
+  populateScene();
 
-    if( tree_ == NULL ) {
-        std::cerr << "Input tree to the TkMap is NULL" << std::endl;
-        return;
-    }
-    populateScene();
-    
-    srand ( time(NULL) );
-    view = new View("Top left view", NULL, rangeMin_, rangeMax_);
-    view->view()->setScene(scene);
-        
-    
-    QHBoxLayout *layout = new QHBoxLayout;
-    layout->addWidget(view);
-    setLayout(layout);
-    
-    //setWindowTitle(tr("Tracker Map"));
-    
-    //this->resize(QSize(1000,600));
-    
-    connect(view, SIGNAL(showSelection()    ), this, SLOT(printSelection()   ) );
-    connect(view, SIGNAL(fixSelection()     ), this, SLOT(fixSelection()     ) );
-    connect(view, SIGNAL(releaseSelection() ), this, SLOT(releaseSelection() ) );
+  srand ( time(NULL) );
+  view = new View("Top left view");
+  view->view()->setScene(scene);
+      
+
+  QHBoxLayout *layout = new QHBoxLayout;
+  layout->addWidget(view);
+  setLayout(layout);
+
+  //setWindowTitle(tr("Tracker Map"));
+
+  //this->resize(QSize(1000,600));
+
+  connect(view, SIGNAL(showSelection()    ), this, SLOT(printSelection()   ) );
+  connect(view, SIGNAL(fixSelection()     ), this, SLOT(fixSelection()     ) );
+  connect(view, SIGNAL(releaseSelection() ), this, SLOT(releaseSelection() ) );
+
 
 }
 
@@ -119,6 +115,8 @@ void TkMap::populateScene()
   QColor background(Qt::cyan);
   background = background.lighter();
   scene->setBackgroundBrush(background);
+  
+  QImage image("qt4logo.png");
   
   QGraphicsTextItem* item = scene->addText(QString::fromAscii(""));
   item->setPos(3200,0);
@@ -231,49 +229,13 @@ void TkMap::populateScene()
     QString typeName = "";
     Double_t var = 0.0;
     Double_t did = 0.0;
-    Double_t di2c = 0.0;
+    UInt_t did32 = 0.0;
+    Double_t i2c = 0.0;
     Float_t fvar = 0.0;
     Double_t dvar = 0.0;
     Int_t ivar = 0;
     UInt_t uvar = 0;
-    //Double_t noisevar[128];
-    //Double_t pedsvar[128];
 
-    //TBranch* bFecCrate       = tree_->GetBranch("FecCrate");
-    //TBranch* bFec            = tree_->GetBranch("Fec");
-    //TBranch* bRing           = tree_->GetBranch("Ring");
-    //TBranch* bCcu            = tree_->GetBranch("Ccu");
-    //TBranch* bI2CChannel     = tree_->GetBranch("I2CChannel");
-    //TBranch* blasChan        = tree_->GetBranch("lasChan");
-    TBranch* bFecKey         = tree_->GetBranch("FecKey");
-    TBranch* bFedId          = tree_->GetBranch("FedId");
-    TBranch* bFeUnit         = tree_->GetBranch("FeUnit");
-    TBranch* bFeChan         = tree_->GetBranch("FeChan");
-    TBranch* bFeApv          = tree_->GetBranch("FeApv");
-
-    //double   FecCrate        = 0.0;
-    //double   Fec             = 0.0;
-    //double   Ring            = 0.0;
-    //double   Ccu             = 0.0;
-    //double   I2CChannel      = 0.0;
-    //double   lasChan         = 0.0;
-    uint32_t FecKey          = 0;
-    double   FedId           = 0.0;
-    double   FeUnit          = 0.0;
-    double   FeChan          = 0.0;
-    double   FeApv           = 0.0;
-
-    //bFecCrate      ->SetAddress(&FecCrate);
-    //bFec           ->SetAddress(&Fec);
-    //bRing          ->SetAddress(&Ring);
-    //bCcu           ->SetAddress(&Ccu);
-    //bI2CChannel    ->SetAddress(&I2CChannel);
-    //blasChan       ->SetAddress(&lasChan);
-    bFecKey        ->SetAddress(&FecKey);
-    bFedId         ->SetAddress(&FedId);
-    bFeUnit        ->SetAddress(&FeUnit);
-    bFeChan        ->SetAddress(&FeChan);
-    bFeApv         ->SetAddress(&FeApv);
     QMap<unsigned long, double> values;
     QMap<unsigned long, double> counts;
 
@@ -287,77 +249,96 @@ void TkMap::populateScene()
     QMap<unsigned long, Chip*>::iterator it = modules.end();
     // the branch type is obviously correct, but the detid needn't be
     // a double (and maybe shouldn't be no matter what)
-    unsigned long detid;
-    int i2c;
-    /*
-    if      (varName_ == "Pedestal" || varName_ == "Noise") {
-        tree_->SetBranchAddress(varName_.toStdString().c_str(), pedsvar);
-        tree_->SetBranchAddress(varName_.toStdString().c_str(), noisevar);
-    }
-    */
-    if      (varName_ == "Pedestal") tree_->SetBranchAddress("PedsMean", &dvar);
-    else if (varName_ == "Noise") tree_->SetBranchAddress("NoiseMean", &dvar);
-    else if (typeName == "UInt_t" || typeName == "unsigned" || typeName == "unsigned int") tree_->SetBranchAddress(varName_.toStdString().c_str(), &uvar);
+    unsigned detid;
+    if      (typeName == "UInt_t" || typeName == "unsigned" || typeName == "unsigned int") tree_->SetBranchAddress(varName_.toStdString().c_str(), &uvar);
     else if (typeName == "Int_t" || typeName == "int") tree_->SetBranchAddress(varName_.toStdString().c_str(), &ivar);
     else if (typeName == "Float_t" || typeName == "float") tree_->SetBranchAddress(varName_.toStdString().c_str(), &fvar);
     else if (typeName == "Double_t" || typeName == "double") tree_->SetBranchAddress(varName_.toStdString().c_str(), &dvar);
-    else {
-        std::cout << "Cannot identify branch type of the variable to be plotted on the TkMap\n"; 
-        return;
-    }
+    else std::cout << "Cannot identify branch type of the variable to be plotted on the TkMap\n"; 
 
-    tree_->SetBranchAddress("Detid",&did);
-    tree_->SetBranchAddress("I2CAddress",&di2c);
+    bool foundDetId = false;
+    bool found_did  = false;
+    bool foundI2CAddress = false;
+    for(Int_t i = 0; i < branchList->GetEntries(); ++i ) {
+        TBranch *branch = static_cast<TBranch*>(branchList->At(i));
+        if (!branch || !branch->GetLeaf(branch->GetName())) continue;
+        if (QString(branch->GetName()) == "DetId") foundDetId = true;
+        if (QString(branch->GetName()) == "detid") found_did  = true;
+        if (QString(branch->GetName()) == "I2CAddress") foundI2CAddress = true;
+    }
+    if (foundDetId)     tree_->SetBranchAddress("DetId",&detid);
+    else if (found_did) tree_->SetBranchAddress("detid",&did32);
+    else                tree_->SetBranchAddress("Detid",&did);
+    if (foundI2CAddress) tree_->SetBranchAddress("I2CAddress",&i2c);
     
     M::m()->nMin(rangeMin_);M::m()->nMax(rangeMax_);
 
-    for(int i = 0; i < tree_->GetEntries(); i++) {
-        if (smap[i] == 0) continue;
-        tree_->GetEntry(i);
-        detid = static_cast<unsigned long>(did);
-        i2c = int(di2c);
 
-        //uint16_t iFecCrate   = uint16_t(FecCrate);
-        //uint16_t iFec        = uint16_t(Fec);
-        //uint16_t iRing       = uint16_t(Ring);
-        //uint16_t iCcu        = uint16_t(Ccu);
-        //uint16_t iI2CChannel = uint16_t(I2CChannel);
-        //uint16_t ilasChan    = uint16_t(lasChan);
-        uint16_t iFedId      = uint16_t(FedId);        
-        uint16_t iFeUnit     = uint16_t(FeUnit);        
-        uint16_t iFeChan     = uint16_t(FeChan);        
-        uint16_t iFeApv      = uint16_t(FeApv);
-
-        SiStripFecKey feckey(FecKey-480);
-        //SiStripFecKey feckey2(iFecCrate, iFec, iRing, iCcu, iI2CChannel, ilasChan+1, uint16_t(i2c));
-        //if (feckey.key() != feckey2.key()) qDebug() << feckey.key() - feckey2.key();
-        SiStripFedKey fedkey(iFedId, iFeUnit, iFeChan, iFeApv);
-
-        it = modules.find(static_cast<unsigned long>(detid));
-        if( it != modules.end() ) {
-            if      (varName_ == "Pedestal" || varName_ == "Noise") var = dvar;
-            else if (typeName == "UInt_t" || typeName == "unsigned" || typeName == "unsigned int") var = double(uvar);
-            else if (typeName == "Int_t" || typeName == "int") var = double(ivar);
-            else if (typeName == "Float_t" || typeName == "float") var = double(fvar);
-            else if (typeName == "Double_t" || typeName == "double") var = dvar;
-            //if (varName_ == "Pedestal" || varName_ == "Noise") mapModule(it.value(), i2c, pedsvar, noisevar, feckey.key(), fedkey.key(), run_.toInt());
-            //else mapModule(it.value(), i2c, var, feckey.key(), fedkey.key(), run_.toInt());
-            mapModule(it.value(), i2c, var, feckey.key(), fedkey.key(), run_.toInt());
-            if( values.find(detid) != values.end() ) { 
-              values[detid] += var;
-              counts[detid]++;
-            } else {
-              values.insert(detid,var);
-              counts.insert(detid,1);
+    if (eventList_ == NULL || eventList_->GetN() == 0) {
+        for(int i = 0; i < tree_->GetEntries(); i++) {
+            tree_->GetEntry(i);
+            if (!foundDetId) {
+                if (found_did) detid = Long64_t(did32);
+                else           detid = Long64_t(did);
+            }
+            if (foundI2CAddress) i2c = Int_t(i2c);
+            it = modules.find(static_cast<unsigned long>(detid));
+            if( it != modules.end() ) {
+                if      (typeName == "UInt_t" || typeName == "unsigned" || typeName == "unsigned int") var = double(uvar);
+                else if (typeName == "Int_t" || typeName == "int") var = double(ivar);
+                else if (typeName == "Float_t" || typeName == "float") var = double(fvar);
+                else if (typeName == "Double_t" || typeName == "double") var = dvar;
+                if (!foundI2CAddress) mapModule(it.value(), var);
+                else {
+                    mapModule(it.value(), i2c, var);
+                    if( values.find(detid) != values.end() ) { 
+                      values[detid] += var;
+                      counts[detid]++;
+                    } else {
+                      values.insert(detid,var);
+                      counts.insert(detid,1);
+                    }
+                }
             }
         }
     }
-    for(  QMap<unsigned long, double>::iterator ittt = values.begin() ; ittt != values.end(); ++ittt) {
-        it = modules.find(ittt.key());
-        if( it != modules.end() ) {
-            ittt.value() /= counts[ittt.key()];
-            it.value()->setValue(ittt.value());
-            it.value()->setColor(QColor(getColor(ittt.value(),M::m()->max(),M::m()->min())));
+
+    else {
+        for(int i = 0; i < eventList_->GetN(); i++) {
+            tree_->GetEntry(eventList_->GetEntry(i));
+            if (!foundDetId) {
+                if (found_did) detid = Long64_t(did32);
+                else           detid = Long64_t(did);
+            }
+            if (foundI2CAddress) i2c = Int_t(i2c);
+            it = modules.find(static_cast<unsigned long>(detid));
+            if( it != modules.end() ) {
+                if      (typeName == "UInt_t" || typeName == "unsigned" || typeName == "unsigned int") var = double(uvar);
+                else if (typeName == "Int_t" || typeName == "int") var = double(ivar);
+                else if (typeName == "Float_t" || typeName == "float") var = double(fvar);
+                else if (typeName == "Double_t" || typeName == "double") var = dvar;
+                if (!foundI2CAddress) mapModule(it.value(), var);
+                else {
+                    mapModule(it.value(), i2c, var);
+                    if( values.find(detid) != values.end() ) { 
+                      values[detid] += var;
+                      counts[detid]++;
+                    } else {
+                      values.insert(detid,var);
+                      counts.insert(detid,1);
+                    }
+                }
+            }
+        }
+    }
+    if (foundI2CAddress) {
+        for(  QMap<unsigned long, double>::iterator ittt = values.begin() ; ittt != values.end(); ++ittt) {
+            it = modules.find(ittt.key());
+            if( it != modules.end() ) {
+                ittt.value() /= counts[ittt.key()];
+                it.value()->setValue(ittt.value());
+                it.value()->setColor(QColor(getColor(ittt.value(),M::m()->max(),M::m()->min())));
+            }
         }
     }
 
@@ -365,37 +346,30 @@ void TkMap::populateScene()
 
 }
 
-void TkMap::mapModule(Chip* c, int i2cadd, Double_t v, unsigned feckey, unsigned fedkey, int r) {
+void TkMap::mapModule(Chip* c, Double_t v) {
+    Double_t stripnoise[128];
+    for (int i = 0; i < 128; i++) stripnoise[i] = v;
+    c->setValue(v);
+    int i2c = 32;
+    for( int i = 0; i < c->getNAPVs(); ++i, ++i2c) {
+      if (c->getNAPVs() == 4 && i2c == 34 ) i2c += 2;
+      c->setAPVValue(i2c, v);
+      c->setAPVStripNoiseValues(i2c,stripnoise);
+      c->setAPVStripPedsValues(i2c,stripnoise);
+      c->setAPVColor(i2c, QColor(getColor(v,M::m()->max(),M::m()->min())));
+    }
+    c->setColor(QColor(getColor(v,M::m()->max(),M::m()->min())));
+}
+
+void TkMap::mapModule(Chip* c, int i2cadd, Double_t v) {
     Double_t stripnoise[128];
     for (int i = 0; i < 128; i++) stripnoise[i] = v;
     c->setAPVValue(i2cadd, v);
     c->setAPVStripNoiseValues(i2cadd,stripnoise);
     c->setAPVStripPedsValues(i2cadd,stripnoise);
-    c->setAPVFecKey(i2cadd,feckey);
-    c->setAPVFedKey(i2cadd,fedkey);
     c->setAPVColor(i2cadd, QColor(getColor(v,M::m()->max(),M::m()->min())));
-    c->setRunNumber(r);
-    c->showToolTip(true);
 }
 
-void TkMap::mapModule(Chip* c, int i2cadd, Double_t* p, Double_t* n, unsigned feckey, unsigned fedkey, int r) {
-    Double_t strippeds[128];
-    Double_t stripnoise[128];
-    Double_t pedv = 0.;
-    for (int i = 0; i < 128; i++) strippeds[i] = p[i];
-    for (int i = 0; i < 128; i++) stripnoise[i] = n[i];
-    for (int i = 0; i < 128; i++) pedv += strippeds[i];
-    pedv/=128.0;
-
-    c->setAPVValue(i2cadd, pedv);
-    c->setAPVStripNoiseValues(i2cadd,stripnoise);
-    c->setAPVStripPedsValues(i2cadd,stripnoise);
-    c->setAPVFecKey(i2cadd,feckey);
-    c->setAPVFedKey(i2cadd,fedkey);
-    c->setAPVColor(i2cadd, QColor(getColor(pedv,M::m()->max(),M::m()->min())));
-    c->setRunNumber(r);
-    c->showToolTip(true);
-}
 
 void TkMap::printSelection() 
 {

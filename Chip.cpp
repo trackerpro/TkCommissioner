@@ -40,7 +40,6 @@
 ****************************************************************************/
 
 #include "Chip.h"
-#include "frmsource.h"
 
 #include <QtGui>
 #include <iostream>
@@ -49,14 +48,14 @@
 
 
 Chip::Chip()
-  : value_(0), detid_(0), napvs_(0), color_(Qt::gray), text(new TText), fixStatus_(0), run_(0), showTT_(false)
+  : value_(0), detid_(0), napvs_(0), color_(Qt::gray), text(new TText), fixStatus_(0)
 {
 
 }
 
 
 Chip::Chip(const QColor &color)
-  : value_(0), detid_(0), napvs_(0), color_(color), text(new TText), fixStatus_(0), run_(0), showTT_(false)
+  : value_(0), detid_(0), napvs_(0), color_(color), text(new TText), fixStatus_(0)
 {
   //setFlags(ItemIsSelectable | ItemIsMovable);
 }
@@ -141,6 +140,7 @@ void Chip::setAPVStripPedsValues(int i2caddress, double *value )
   apvStripPedsValues_.insert(i2caddress,tmp);
 }
 
+
 void Chip::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
 {
   Q_UNUSED(widget);
@@ -155,23 +155,23 @@ void Chip::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWid
   painter->save();
 
   // add a tool tip, i.e. mouseover information for this module
-  if (showTT_) {  
-    this->setToolTip(QString("<table>")+
-      	   QString("<tr><td>Detid: </td><td>")+QString::number(detid_)+QString("</td></tr>")+
-      	   QString("<tr><td>value: </td><td>")+QString::number(value_)+QString("</td</tr>"));
-    
-    // if we are zoomed in, also include information about the APVs
-    if( lod >= 3 ) {
-      this->setToolTip(this->toolTip()+QString("<tr><td>I2CAddress</td><td>Values</td></tr>"));
-    
-      QMap<int, double>::iterator it = apvValues_.begin();
-      for( ; it != apvValues_.end(); ++it ) {
-        this->setToolTip(this->toolTip()+QString("<tr><td>")+QString::number(it.key()%31)+QString("</td><td>")+QString::number(it.value())+QString("</td</tr>"));
-      }
-    }
-    this->setToolTip(this->toolTip()+QString("</table>"));
-  }  
+  this->setToolTip(QString("<table>")+
+		   QString("<tr><td>Detid: </td><td>")+QString::number(detid_)+QString("</td></tr>")+
+		   QString("<tr><td>value: </td><td>")+QString::number(value_)+QString("</td</tr>"));
+ 
+  /* Not need for the offline  
+  // if we are zoomed in, also include information about the APVs
+  if( lod >= 3 ) {
+    this->setToolTip(this->toolTip()+QString("<tr><td>I2CAddress</td><td>Values</td></tr>"));
 
+    QMap<int, double>::iterator it = apvValues_.begin();
+    for( ; it != apvValues_.end(); ++it ) {
+      this->setToolTip(this->toolTip()+QString("<tr><td>")+QString::number(it.key()%31)+QString("</td><td>")+QString::number(it.value())+QString("</td</tr>"));
+    }
+  }
+  */
+
+  this->setToolTip(this->toolTip()+QString("</table>"));
   Float_t r=100,g=100,b=100;
   getColor(value_,r,g,b);
 
@@ -259,7 +259,8 @@ void Chip::mousePressEvent(QGraphicsSceneMouseEvent *event)
   Q_UNUSED(event);
 }
 
-void Chip::mouseDoubleClickForState(QGraphicsSceneMouseEvent *event)
+
+void Chip::mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event)
 {
 
   Q_UNUSED(event);
@@ -273,11 +274,12 @@ void Chip::mouseDoubleClickForState(QGraphicsSceneMouseEvent *event)
   QDialog *dialog = new QDialog;
   QRectF area = QApplication::desktop()->screenGeometry();
   float theWidth = area.width()/6.0;
-  float theHeight = area.height()/1.5;
+  float theHeight = area.height()/2.0;
   dialog->resize(theWidth*apvs_.size(),theHeight);
   QGridLayout *topLayout = new QGridLayout;
   TQtWidget *widget = new TQtWidget;
-  widget->GetCanvas()->Divide(apvs_.size(),2,0);
+  //widget->GetCanvas()->Divide(apvs_.size(),2,0);
+  widget->GetCanvas()->Divide(apvs_.size(),1,0);
   QMap<int, std::vector<double> >::iterator it = apvStripPedsValues_.begin();
   double min = 0xFFFF, max = -0xFFFF;
 
@@ -288,6 +290,7 @@ void Chip::mouseDoubleClickForState(QGraphicsSceneMouseEvent *event)
     drawValues(widget, pad,it,min,max,"Noise");
   }
 
+  /*
   it = apvStripNoiseValues_.begin();
   min = 0xFFFF; max = -0xFFFF;
 
@@ -295,7 +298,7 @@ void Chip::mouseDoubleClickForState(QGraphicsSceneMouseEvent *event)
   for( ; it != apvStripNoiseValues_.end(); ++it ) {
     drawValues(widget, pad,it,min,max,"Pedestal");
   }
-
+  */
 
 
   topLayout->addWidget(widget);
@@ -304,49 +307,6 @@ void Chip::mouseDoubleClickForState(QGraphicsSceneMouseEvent *event)
 
   QGraphicsItem::mousePressEvent(event);
   update();
-}
-
-
-void Chip::mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event)
-{
-    Q_UNUSED(event);
-
-    if (!showTT_) return;
-
-    QString runcur = QString::number(run_);
-    QString runref = "";
-
-    if (run_ == 137 || run_ == 138) {
-        //mouseDoubleClickForState(event);
-        return;
-    }
-    else {
-        QVector<QPair<QString, QString> > dev;
-        QVector<QPair<unsigned, unsigned> > keys;
-        for (QMap<int, unsigned>::ConstIterator ii = apvFecKeys_.constBegin(); ii != apvFecKeys_.constEnd(); ++ii) {
-            dev.push_back(QPair<QString, QString>(QString::number(detid_), QString::number(ii.key())));
-        }
-        for (QMap<int, unsigned>::ConstIterator ii = apvFecKeys_.constBegin(); ii != apvFecKeys_.constEnd(); ++ii) {
-            int apvk = ii.key();
-            keys.push_back(QPair<unsigned, unsigned>(apvFecKeys_[apvk], apvFedKeys_[apvk]));
-        }
-        
-        SourceDisplay* source = new SourceDisplay(NULL, runcur, runref, dev, keys);
-        
-        QDialog *dialog = new QDialog;
-        dialog->setWindowTitle("Module Info");
-        QRectF area = QApplication::desktop()->screenGeometry();
-        float theWidth = area.width();
-        float theHeight = area.height();
-        dialog->resize(theWidth/3.0,theHeight/3.0);
-        QGridLayout *topLayout = new QGridLayout;
-        topLayout->addWidget(source);
-        dialog->setLayout(topLayout);
-        dialog->show();
-        
-        QGraphicsItem::mousePressEvent(event);
-        update();
-    }
 }
 
 void Chip::mouseMoveEvent(QGraphicsSceneMouseEvent *event)

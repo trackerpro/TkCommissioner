@@ -43,53 +43,70 @@
 
 #include <QtGui>
 
+
+//#ifndef QT_NO_OPENGL
+//#include <QtOpenGL>
+//#endif
+
 #include <qmath.h>
 #include <iostream>
 
 
-void GraphicsView::drawBackground(QPainter *painter, const QRectF &rect) {
-    gStyle->SetPalette(1);
-    painter->save();
-    painter->setBrush(QColor(Qt::white));
-    painter->drawRect(rect);
-    painter->setBrush(QColor(Qt::black));
-    QFont font("Times", 24);
-    painter->setFont(font);
-    painter->scale(1,-1);
+void GraphicsView::drawBackground(QPainter *painter, const QRectF &rect)
+{
+  gStyle->SetPalette(1);
+  painter->save();
+  painter->setBrush(QColor(Qt::white));
+  painter->drawRect(rect);
+  //painter->restore();
+  painter->setBrush(QColor(Qt::black));
+  QFont font("Times", 24);
+  painter->setFont(font);
+  painter->scale(1,-1);
+  if (partition.startsWith("TI")) {
     painter->drawText(900,-330,"TIB L1");
     painter->drawText(900,-1000,"TIB L2");
     painter->drawText(1300,-330,"TIB L3");
     painter->drawText(1300,-1000,"TIB L4");
+  }
+  if (partition.startsWith("TO")) {
     painter->drawText(1700,-325,"TOB L1");
     painter->drawText(1700,-1020,"TOB L2");
     painter->drawText(2100,-325,"TOB L3");
     painter->drawText(2100,-1020,"TOB L4");
     painter->drawText(2500,-325,"TOB L5");
     painter->drawText(2500,-1020,"TOB L6");
-    float r=1.0,g=1.0,b=1.0;
-    for( int i = 0; i < gStyle->GetNumberOfColors()-1; ++i ) {
-        getColor( M::m()->min()+i*(M::m()->range()/gStyle->GetNumberOfColors()),r,g,b);
-        if( scene() ) {
-            if( i % 5 == 0 ) painter->drawText(3050, -210-i*20, QString::number(M::m()->min()+i*(M::m()->range()/gStyle->GetNumberOfColors()),'g',3) );
-            painter->setBrush(QColor::fromRgbF(r,g,b));
-            painter->drawRect(3000, -200-i*20,30,20);
-        }
+  }
+  float r=1.0,g=1.0,b=1.0;
+  for( int i = 0; i < gStyle->GetNumberOfColors()-1; ++i ) {
+    getColor( M::m()->min()+i*(M::m()->range()/gStyle->GetNumberOfColors()),r,g,b);
+    if( scene() ) {
+      if( i % 5 == 0 ) {
+	painter->drawText(3050, -210-i*20, QString::number(M::m()->min()+i*(M::m()->range()/gStyle->GetNumberOfColors()),'g',3) );
+      }
+      painter->setBrush(QColor::fromRgbF(r,g,b));
+      painter->drawRect(3000, -200-i*20,30,20);
     }
-    painter->scale(1,-1);
-    painter->restore();
+  }
+  painter->scale(1,-1);
+  painter->restore();
 
 }
 
-void GraphicsView::wheelEvent(QWheelEvent *e) {
+void GraphicsView::wheelEvent(QWheelEvent *e)
+{
     if (e->modifiers() & Qt::ControlModifier) {
-        if (e->delta() > 0) view->zoomIn(6);
-        else                view->zoomOut(6);
+        if (e->delta() > 0)
+            view->zoomIn(6);
+        else
+            view->zoomOut(6);
         e->accept();
-    } 
-    else QGraphicsView::wheelEvent(e);
+    } else {
+        QGraphicsView::wheelEvent(e);
+    }
 }
 
-View::View(const QString &, QWidget *parent, double minv, double maxv)
+View::View(const QString &/*name*/, QWidget *parent)
     : QFrame(parent)
 {
     setFrameStyle(Sunken | StyledPanel);
@@ -107,13 +124,13 @@ View::View(const QString &, QWidget *parent, double minv, double maxv)
     zoomInIcon->setAutoRepeat(true);
     zoomInIcon->setAutoRepeatInterval(33);
     zoomInIcon->setAutoRepeatDelay(0);
-    zoomInIcon->setIcon(QPixmap("images/zoomin.png"));
+    zoomInIcon->setIcon(QPixmap("zoomin.png"));
     zoomInIcon->setIconSize(iconSize);
     QToolButton *zoomOutIcon = new QToolButton;
     zoomOutIcon->setAutoRepeat(true);
     zoomOutIcon->setAutoRepeatInterval(33);
     zoomOutIcon->setAutoRepeatDelay(0);
-    zoomOutIcon->setIcon(QPixmap("images/zoomout.png"));
+    zoomOutIcon->setIcon(QPixmap("zoomout.png"));
     zoomOutIcon->setIconSize(iconSize);
     zoomSlider = new QSlider;
     zoomSlider->setMinimum(0);
@@ -159,18 +176,18 @@ View::View(const QString &, QWidget *parent, double minv, double maxv)
     releaseButton->setText(tr("Release"));
 
     printButton = new QToolButton;
-    printButton->setIcon(QPixmap("images/fileprint.png"));
+    printButton->setIcon(QIcon(QPixmap(":/fileprint.png")));
 
     sbMin = new QDoubleSpinBox;
     sbMax = new QDoubleSpinBox;
-    if (minv >= maxv) {
-        minv = 2.0;
-        maxv = 6.0;
-    }        
-    sbMin->setValue(minv);
-    sbMax->setValue(maxv);
-    sbMin->setSingleStep ((maxv-minv)/25.);
-    sbMax->setSingleStep ((maxv-minv)/25.);
+    sbMin->setValue(0.0);
+    sbMin->setMinimum(0.0);
+    sbMin->setMaximum(10000.0);
+    sbMin->setSingleStep (1.0);
+    sbMax->setValue(10000.0);
+    sbMax->setMinimum(0.0);
+    sbMax->setMaximum(10000.0);
+    sbMax->setSingleStep (1.0);
 
     QButtonGroup *pointerModeGroup = new QButtonGroup;
     pointerModeGroup->setExclusive(true);
@@ -222,11 +239,13 @@ View::View(const QString &, QWidget *parent, double minv, double maxv)
 
 }
 
-QGraphicsView *View::view() const {
+QGraphicsView *View::view() const
+{
     return static_cast<QGraphicsView *>(graphicsView);
 }
 
-void View::resetView() {
+void View::resetView()
+{
     zoomSlider->setValue(250);
     setupMatrix();
     graphicsView->fitInView(QRectF(0, 0, 3000, 1500));
@@ -234,11 +253,13 @@ void View::resetView() {
     resetButton->setEnabled(false);
 }
 
-void View::setResetButtonEnabled() {
+void View::setResetButtonEnabled()
+{
     resetButton->setEnabled(true);
 }
 
-void View::setupMatrix() {
+void View::setupMatrix()
+{
     qreal scale = qPow(qreal(2), (zoomSlider->value() - 325) / qreal(50));
 
     QMatrix matrix;
@@ -248,16 +269,21 @@ void View::setupMatrix() {
     setResetButtonEnabled();
 }
 
-void View::togglePointerMode() {
-    graphicsView->setDragMode(selectModeButton->isChecked() ? QGraphicsView::RubberBandDrag : QGraphicsView::ScrollHandDrag);
+void View::togglePointerMode()
+{
+    graphicsView->setDragMode(selectModeButton->isChecked()
+                              ? QGraphicsView::RubberBandDrag
+                              : QGraphicsView::ScrollHandDrag);
     graphicsView->setInteractive(selectModeButton->isChecked());
 }
 
-void View::toggleAntialiasing() {
+void View::toggleAntialiasing()
+{
     graphicsView->setRenderHint(QPainter::Antialiasing, antialiasButton->isChecked());
 }
 
-void View::print() {
+void View::print()
+{
 #ifndef QT_NO_PRINTER
     QPrinter printer;
     QPrintDialog dialog(&printer, this);
@@ -268,11 +294,13 @@ void View::print() {
 #endif
 }
 
-void View::zoomIn(int level) {
+void View::zoomIn(int level)
+{
     zoomSlider->setValue(zoomSlider->value() + level);
 }
 
-void View::zoomOut(int level) {
+void View::zoomOut(int level)
+{
     zoomSlider->setValue(zoomSlider->value() - level);
 }
 

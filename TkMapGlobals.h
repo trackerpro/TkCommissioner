@@ -1,5 +1,15 @@
-#ifndef TKMAP_GLOBALS_H
-#define TKMAP_GLOBALS_H
+/** \file global.hpp
+ * Global function definitions and helper classes
+ * This file contains functions which can be used from any of the
+ * project classes. In addition it contains global singleton classes
+ * to configure items independent of the thread it is used in
+ */
+
+
+
+
+#ifndef SELECTION_GLOBALS
+#define SELECTION_GLOBALS
 
 #include "TColor.h"
 #include "TROOT.h"

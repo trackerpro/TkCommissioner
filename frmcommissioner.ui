@@ -19,7 +19,7 @@
   <property name="windowTitle">
    <string>Tk Commissioner</string>
   </property>
-  <widget class="QTabWidget" name="tabController">
+  <widget class="QTabWidget" name="tabCommissioner">
    <property name="currentIndex">
     <number>-1</number>
    </property>

@@ -43,18 +43,17 @@
 #define TKMAP_H
 
 #include "QConnectedTabWidget.h"
-#include "Chip.h"
-
+#include <QMap>
 #include <vector>
 #include <TTree.h>
 #include <TEventList.h>
 
-#include <QMap>
-#include <QGraphicsScene>
-#include <QGraphicsView>
-#include <QLabel>
-#include <QGraphicsItem>
-#include <QGraphicsPolygonItem>
+QT_FORWARD_DECLARE_CLASS(QGraphicsScene)
+QT_FORWARD_DECLARE_CLASS(QGraphicsView)
+QT_FORWARD_DECLARE_CLASS(QLabel)
+QT_FORWARD_DECLARE_CLASS(QGraphicsItem)
+QT_FORWARD_DECLARE_CLASS(QGraphicsPolygonItem)
+QT_FORWARD_DECLARE_CLASS(Chip)
 
 
 
@@ -63,7 +62,7 @@ class TkMap : public QConnectedTabWidget
 {
     Q_OBJECT
 public:
-    TkMap(QConnectedTabWidget *parent, TTree* tree, const QVector<int>& sm, const QString& vName, float min, float max, const QString& run);
+    TkMap(QConnectedTabWidget *parent, TTree* tree, TEventList* eventList, const QString& vName, float min, float max);
 
 
     public slots:
@@ -98,20 +97,19 @@ private:
     /**
      * Map the module on the TkMap
      */
-    void mapModule(Chip*, int, Double_t, unsigned, unsigned, int);
+    void mapModule(Chip*, Double_t);
     /**
      * Map the module on the TkMap
      */
-    void mapModule(Chip*, int, Double_t*, Double_t*, unsigned, unsigned, int);
+    void mapModule(Chip*, int, Double_t);
 
     QGraphicsScene *scene;
     View *view;
     QMap<unsigned long,Chip*> modules;
     TTree* tree_;
-    QVector<int> smap;
+    TEventList* eventList_;
     QString varName_;
     float rangeMin_, rangeMax_;
-    QString run_;
 };
 
 #endif

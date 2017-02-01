@@ -1,10 +1,52 @@
+/****************************************************************************
+**
+** Copyright (C) 2012 Nokia Corporation and/or its subsidiary(-ies).
+** All rights reserved.
+** Contact: Nokia Corporation (qt-info@nokia.com)
+**
+** This file is part of the demonstration applications of the Qt Toolkit.
+**
+** $QT_BEGIN_LICENSE:LGPL$
+** GNU Lesser General Public License Usage
+** This file may be used under the terms of the GNU Lesser General Public
+** License version 2.1 as published by the Free Software Foundation and
+** appearing in the file LICENSE.LGPL included in the packaging of this
+** file. Please review the following information to ensure the GNU Lesser
+** General Public License version 2.1 requirements will be met:
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** In addition, as a special exception, Nokia gives you certain additional
+** rights. These rights are described in the Nokia Qt LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
+**
+** GNU General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU General
+** Public License version 3.0 as published by the Free Software Foundation
+** and appearing in the file LICENSE.GPL included in the packaging of this
+** file. Please review the following information to ensure the GNU General
+** Public License version 3.0 requirements will be met:
+** http://www.gnu.org/copyleft/gpl.html.
+**
+** Other Usage
+** Alternatively, this file may be used in accordance with the terms and
+** conditions contained in a signed written agreement between you and Nokia.
+**
+**
+**
+**
+**
+** $QT_END_LICENSE$
+**
+****************************************************************************/
+
 #ifndef CHIP_H
 #define CHIP_H
 
+class QMouseEvent;
+class TQtWidget;
+
 #include "TkMapGlobals.h"
 
-#include <QMouseEvent>
-#include <TQtWidget.h>
 #include <QtGui/QColor>
 #include <QtGui/QGraphicsItem>
 #include <TText.h>
@@ -15,8 +57,9 @@
  * Contains global information about
  * the module and in addition about APVs
  */
-class Chip : public QGraphicsItem {
-    public:
+class Chip : public QGraphicsItem
+{
+public:
     /**
      * default constructor
      */ 
@@ -25,7 +68,7 @@ class Chip : public QGraphicsItem {
      * constructor passing a QColor object
      */ 
     Chip(const QColor &color);
-    
+
     /**
      * return the bounding rectangle of this object
      */
@@ -53,6 +96,9 @@ class Chip : public QGraphicsItem {
     void          setColor(QColor color) { color_ = color; }
     /**
      * method set the value for a given APV of this object
+     * 
+     * @param[in] i2caddress The i2caddress of the APV whose value should be set 
+     * @param[in] value The new value for this APV
      */
     void          setAPVValue(int i2caddress, double value) { apvValues_.insert(i2caddress,value); }
     /**
@@ -63,14 +109,6 @@ class Chip : public QGraphicsItem {
      * set strip pedestal values for a given APV of this object
      */
     void          setAPVStripPedsValues(int i2caddress, double *value );
-    /**
-     * set SiStripFecKey for a given APV of this object
-     */
-    void          setAPVFecKey(int i2caddress, unsigned key ) { apvFecKeys_.insert(i2caddress, key); }
-    /**
-     * set SiStripFedKey for a given APV of this object
-     */
-    void          setAPVFedKey(int i2caddress, unsigned key ) { apvFedKeys_.insert(i2caddress, key); }
     /**
      * set QColor object for a given APV of this object
      */
@@ -88,13 +126,9 @@ class Chip : public QGraphicsItem {
      */ 
     unsigned long getDetid() { return detid_; }
     /**
-     * set run number
+     * set fix status of this object
      */ 
-    void          setRunNumber( int r ) { run_ = r; }
-    /**
-     * set flag for tool tip text
-     */ 
-    void          showToolTip( bool f ) { showTT_ = f; }
+    int getNAPVs() { return napvs_; }
     /**
      * set fix status of this object
      */ 
@@ -115,10 +149,6 @@ class Chip : public QGraphicsItem {
      */ 
     void mouseDoubleClickEvent ( QGraphicsSceneMouseEvent * event );
     /**
-     * special handler for showing pedestals/noise for states
-     */ 
-    void mouseDoubleClickForState( QGraphicsSceneMouseEvent * event );
-    /**
      * overload of QGraphicsItem::mousePressEvent
      * changes selection status of the item
      */ 
@@ -134,7 +164,8 @@ class Chip : public QGraphicsItem {
      */ 
     void mouseReleaseEvent(QGraphicsSceneMouseEvent *event);
 
-    private:
+ private:
+    // private methods
     /**
      * method to find min and max from a container and return these by reference
      */
@@ -145,24 +176,21 @@ class Chip : public QGraphicsItem {
     void drawValues( TQtWidget *widget, int &pad, QMap<int, std::vector<double> >::iterator &it, double &min, double &max, TString value );
 
     // members
-    double                         value_;                /*!< a value associated with this object used to determine its color */
-    unsigned long                  detid_;                /*!< detid to uniquely identify this object */
-    int                            napvs_;                /*!< the number of APVs associated with this object */
-    QColor                         color_;                /*!< a QColor object to steer the current color of the object */
-    QPolygonF                      polygon_;              /*!< a QPolygonF that contains the outline of the module */
-    QRectF                         rect_;                 /*!< the bounding rectangle of this object */                             
-    QVector<QPointF>               points_;               /*!< QVector of points associated with this object */                             
-    QMap<int, QPolygonF>           apvs_;                 /*!< Map of polygons for the individual APVs */                             
+    double                          value_;               /*!< a value associated with this object used to determine its color */
+    unsigned long                  detid_;               /*!< detid to uniquely identify this object */
+    int                            napvs_;               /*!< the number of APVs associated with this object */
+    QColor                         color_;               /*!< a QColor object to steer the current color of the object */
+    QPolygonF                      polygon_;             /*!< a QPolygonF that contains the outline of the module */
+    QRectF                         rect_;                /*!< the bounding rectangle of this object */                             
+    QVector<QPointF>               points_;              /*!< QVector of points associated with this object */                             
+    QMap<int, QPolygonF>           apvs_;                /*!< Map of polygons for the individual APVs */                             
     QMap<int, double>               apvValues_;           /*!< Map of values for the individual APVs */
     QMap<int, std::vector<double> > apvStripNoiseValues_; /*!< Map of strip noise values for the individual APVs */                             
     QMap<int, std::vector<double> > apvStripPedsValues_;  /*!< Map of strip pedestal values for the individual APVs */                             
-    QMap<int, QColor>              apvColors_;            /*!< Map of QColor objects for the individual APVs */                             
-    QMap<int, unsigned>            apvFecKeys_;           /*!< Map of SiStripFecKey for the individual APVs */                             
-    QMap<int, unsigned>            apvFedKeys_;           /*!< Map of SiStripFedKey for the individual APVs */                             
-    TText*                         text;                  /*!< TText object to draw various text elements */ 
-    bool                           fixStatus_;            /*!< record fix status of this object */ 
-    int                            run_;                  /*!< run number */    
-    bool                           showTT_;               /*!< Flag for tool tip text */
+    QMap<int, QColor>              apvColors_;           /*!< Map of QColor objects for the individual APVs */                             
+    TText                         *text;                 /*!< TText object to draw various text elements */ 
+    bool                           fixStatus_;           /*!< record fix status of this object */ 
+    
     
 };
 

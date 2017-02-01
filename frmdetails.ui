@@ -96,7 +96,7 @@
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout_4">
            <item>
-            <widget class="QPushButton" name="btnShowSource">
+            <widget class="QPushButton" name="btnShowSummary">
              <property name="text">
               <string>Source Histograms</string>
              </property>

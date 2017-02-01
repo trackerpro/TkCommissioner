@@ -48,9 +48,8 @@
 #include <QCheckBox>
 #include <QSlider>
 #include <QString>
+#include <TkMapGlobals.h>
 #include <QDoubleSpinBox>
-
-#include "TkMapGlobals.h"
 
 QT_FORWARD_DECLARE_CLASS(QLabel)
 QT_FORWARD_DECLARE_CLASS(QToolButton)
@@ -101,7 +100,7 @@ public:
     /**
      * constructor passing name and possibly parent
      */ 
-    View(const QString &name, QWidget *parent = 0, double minv = 2.0, double maxv = 6.0);
+    View(const QString &name, QWidget *parent = 0);
     /**
      * return pointer to graphics view associated with this frame
      */ 

@@ -1,17 +1,8 @@
-// Project includes
 #include "Debug.h"
-#include "cmssw/SiStripFecKey.h"
-#include "cmssw/SiStripFedKey.h"
-#include "FedView.h"
-#include "TreeBuilder.h"
 #include "frmtreeviewer.h"
-#include "frmreferencechooser.h"
-#include "frmruninfo.h"
 #include "frmdetails.h"
 #include "frmtkmap.h"
-#include "frmfedmap.h"
 
-// Qt includes
 #include <QWhatsThis>
 #include <QToolTip>
 #include <QTextEdit>
@@ -21,32 +12,33 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QProgressDialog>
-#include <QtSql/QSqlQuery>
 
-// ROOT includes
+
 #include <TROOT.h>
 #include <TFile.h>
 #include <TTree.h>
+#include <TLeaf.h>
+#include <TCutG.h>
 #include <TEventList.h>
 #include <TH1.h>
 #include <TKey.h>
 #include <TEnv.h>
-#include <TStyle.h>
 #include <TChain.h>
 #include <TChainElement.h>
+#include <THStack.h>
 
-TreeViewer::TreeViewer(const QString& tmpfilename, bool useCache, QWidget* parent):
+#include <set>
+#include <iostream>
+#include <sstream>
+
+TreeViewer::TreeViewer(QWidget* parent):
     QConnectedTabWidget(parent),
-    useCachedTrees(useCache),
-    invChecked(false),
     xBins(-1), yBins(-1), zBins(-1),
-    treeInfo(tmpfilename),
     X(), Y(), Z(),
     curX(), curY(), curZ(),
     curDrawX(), curDrawY(), curDrawZ(),
     curRefX(false), curRefY(false), curRefZ(false),
     curDiffX(false), curDiffY(false), curDiffZ(false),
-    sameRefRunType(false),
     xboundmin(0.), xboundmax(0.), yboundmin(0.), yboundmax(0.)
 {
     setupUi(this); 
@@ -59,205 +51,118 @@ TreeViewer::TreeViewer(const QString& tmpfilename, bool useCache, QWidget* paren
     cmbCutOpt->addItem("select","select");
     cmbCutOpt->addItem("unselect","unselect");
     
-    setDrawOptions(1);
-    btnTkMap->setEnabled(true);
+    setDrawOptions(_1D);
 
-    clientFile = NULL;
+    btnRef->setEnabled(false);
 }
 
 TreeViewer::~TreeViewer() {
-    if (clientFile != NULL) clientFile->Close();
 }
 
 void TreeViewer::closeEvent(QCloseEvent*) {
-    if (clientFile != NULL) clientFile->Close();
-    treeInfo.closeTree(false);
+    freeTrees();
 }
 
 TCanvas* TreeViewer::getCanvas() { 
     return qtCanvas->GetCanvas(); 
 }
 
-void TreeViewer::updateCanvas() {
+void TreeViewer::update() {
     this->getCanvas()->Modified();
     this->getCanvas()->Update();
 }
 
-bool TreeViewer::addRun(QString partitionName, QString runNumber, bool isCurrent) {
+bool TreeViewer::setTree(const QString& tmpFileName_, std::vector<QPair<QString, QString> > treePaths_) {
+    if (treePaths_.size() == 0) return false;
 
-    if (runNumber.toInt() == sistrip::CURRENTSTATE || runNumber.toInt() == sistrip::LASTO2O) {
-        btnGetSelected->setEnabled(false);
-        btnRef->setEnabled(false);
-        //btnTkMap->setEnabled(false);
+    treebuilder.buildTree(tmpFileName_, treePaths_);
+    if (treebuilder.getCurrentTree()   == NULL) return false;
+
+    TObjArray* branchList = treebuilder.getCurrentTree()->GetListOfBranches();
+    if (varList.size() != 0) varList.clear();
+    for(Int_t i = 0; i < branchList->GetEntries(); ++i ) {
+        TBranch *branch = static_cast<TBranch*>(branchList->At(i));
+        QString branchName(branch->GetName());
+        QString branchClassName(branch->GetClassName());
+        varList.push_back(QPair<QString, QString>(branchName, branchClassName));
     }
+
+    chkRefX ->setEnabled(false);
+    chkRefY ->setEnabled(false);
+    chkRefZ ->setEnabled(false);
+
+    fillBranchNames(true, _dimX);
+    fillBranchNames(true, _dimY);
+    fillBranchNames(true, _dimZ);
+
+    lblInfo->setText(QString("Tree with ")+QString::number(treebuilder.getCurrentTree()->GetEntries())+QString(" entries loaded"));
+
+    if (treePaths_.size() == 1) return true;
+
+    if (treebuilder.getReferenceTree() == NULL) {
+        if (treePaths_[1].first == "" || treePaths_[1].second == "") return true;
+        else return false;
+    }        
+
+    TObjArray* refBranchList = treebuilder.getReferenceTree()->GetListOfBranches();
+    if (refVarList.size() != 0) refVarList.clear();
+    for(Int_t i = 0; i < refBranchList->GetEntries(); ++i ) {
+        TBranch *branch = static_cast<TBranch*>(refBranchList->At(i));
+        QString branchName(branch->GetName());
+        QString branchClassName(branch->GetClassName());
+        refVarList.push_back(QPair<QString, QString>(branchName, branchClassName));
+    }
+
+    chkRefX ->setEnabled(true);
+    chkRefY ->setEnabled(true);
+    chkRefZ ->setEnabled(true);
+
+    if (treebuilder.isRefTreeTypeSame()) {
+        chkDiffX->setEnabled(true);
+        chkDiffY->setEnabled(true);
+        chkDiffZ->setEnabled(true);
+    }        
     else {
-        btnGetSelected->setEnabled(true);
-        btnRef->setEnabled(true);
-        //btnTkMap->setEnabled(true);
-    }
-
-    QRunId runId(partitionName,runNumber);
-    if (Debug::Inst()->getEnabled()) qDebug() << "Loading analysis for " << runId.first << ":" << runId.second;
-    QString analysisTreeFilename = TreeBuilder::Inst()->loadAnalysis(runId, useCachedTrees);
-    if(analysisTreeFilename == "") { 
-        if (Debug::Inst()->getEnabled()) qDebug() << "Unable to load analysis " << runId.first << ":" << runId.second << " ... analysis may already be loaded or can't be accessed";
-        return false;
-    }
-    QPair<QString, QString> treePath;
-    treePath.first = analysisTreeFilename;
-    treePath.second = "DBTree";
-
-    treeInfo.buildTreeInfo(runId, treePath, isCurrent);
-    TObjArray* branchList = ( isCurrent ? treeInfo.getCurrentTree()->GetListOfBranches() : treeInfo.getReferenceTree()->GetListOfBranches() );
-
-    if (isCurrent) {
-        if (selMap.size() != 0) selMap.clear();
-        for (int i = 0; i < treeInfo.getCurrentTree()->GetEntries(); i++) selMap.push_back(0);
-
-        if (varList.size() != 0) varList.clear();
-        for(Int_t i = 0; i < branchList->GetEntries(); ++i ) {
-            TBranch *branch = static_cast<TBranch*>(branchList->At(i));
-            varList.push_back(QPair<QString, QString>(branch->GetName(), branch->GetClassName()));
-        }
-
-        fillBranchNames(true, 'x'); fillBranchNames(true, 'y'); fillBranchNames(true, 'z');
-
-        if      (runNumber.toInt() == sistrip::CURRENTSTATE) btnRunInfo->setText(partitionName+QString(": Curr. DB State"));
-        else if (runNumber.toInt() == sistrip::LASTO2O     ) btnRunInfo->setText(partitionName+QString(": Last O2O State"));
-        else btnRunInfo->setText(partitionName+QString(": ")+runNumber);
-        lblInfo->setText(QString("Tree with ")+QString::number(treeInfo.getCurrentTree()->GetEntries())+QString(" devices loaded"));
-
-        fillSummaryHists(runNumber);
-    }
-
-    else {
-        if (refVarList.size() != 0) refVarList.clear();
-        for(Int_t i = 0; i < branchList->GetEntries(); ++i ) {
-            TBranch *branch = static_cast<TBranch*>(branchList->At(i));
-            refVarList.push_back(QPair<QString, QString>(branch->GetName(), branch->GetClassName()));
-        }
-
-        btnRef->setText("Ref: " + runId.second);
-        
-        chkDiffX->setEnabled(sameRefRunType); chkDiffY->setEnabled(sameRefRunType); chkDiffZ->setEnabled(sameRefRunType);
-        chkRefX->setEnabled(true); chkRefY->setEnabled(true); chkRefZ->setEnabled(true);
-        if (!sameRefRunType) {
-            chkDiffX->setCheckState(Qt::Unchecked); chkDiffY->setCheckState(Qt::Unchecked); chkDiffZ->setCheckState(Qt::Unchecked);
-        }
-
+        chkDiffX->setEnabled(false);
+        chkDiffY->setEnabled(false);
+        chkDiffZ->setEnabled(false);
     }
 
     return true;
 }
 
-void TreeViewer::fillBranchNames(bool isCurrent, char axis) {
-    if (Debug::Inst()->getEnabled()) qDebug() << "(Re)populating the variable list";
-
-    if (axis == 'x') cmbX->clear();
-    if (axis == 'y') cmbY->clear();
-    if (axis == 'z') cmbZ->clear();
-
-    if (axis == 'x') cmbX->addItem("(NONE)", QString(""));
-    if (axis == 'y') cmbY->addItem("(NONE)", QString(""));
-    if (axis == 'z') cmbZ->addItem("(NONE)", QString(""));
-  
-    if (isCurrent) { 
-        if (varList.size() == 0) return;
-        
-        for(int i = 0; i < varList.size(); i++) {
-            if (axis == 'x') cmbX->addItem(varList[i].first.toStdString().c_str(), varList[i].second.toStdString().c_str());
-            if (axis == 'y') cmbY->addItem(varList[i].first.toStdString().c_str(), varList[i].second.toStdString().c_str());
-            if (axis == 'z') cmbZ->addItem(varList[i].first.toStdString().c_str(), varList[i].second.toStdString().c_str());
-        }
-    }
-    else { 
-        if (refVarList.size() == 0) return;
-        
-        for(int i = 0; i < refVarList.size(); i++) {
-            if (axis == 'x') cmbX->addItem(refVarList[i].first.toStdString().c_str(), refVarList[i].second.toStdString().c_str());
-            if (axis == 'y') cmbY->addItem(refVarList[i].first.toStdString().c_str(), refVarList[i].second.toStdString().c_str());
-            if (axis == 'z') cmbZ->addItem(refVarList[i].first.toStdString().c_str(), refVarList[i].second.toStdString().c_str());
-        }
-    }
+void TreeViewer::freeTrees() {
+    treebuilder.closeTree(false);
 }
 
-void TreeViewer::fillSummaryHists(const QString& runNumber) {
+void TreeViewer::fillBranchNames(bool isCurrent, unsigned int axis) {
+    if(Debug::Inst()->getEnabled()) std::cout << "(Re)populating the variable list" << std::endl;
 
-    if (runNumber.toInt() == sistrip::CURRENTSTATE || runNumber.toInt() == sistrip::LASTO2O) return; 
+    if (axis == _dimX) cmbX->clear();
+    if (axis == _dimY) cmbY->clear();
+    if (axis == _dimZ) cmbZ->clear();
 
-    if (summaryHists.size() > 0) summaryHists.clear(); 
-    btnShowSummary->setEnabled(false);
-    cmbSummaryHists->setEnabled(false);
-
-    TString filePath = Form("/opt/cmssw/Data/%d/SiStripCommissioningClient*.root", runNumber.toInt());
-    TChain chain;
-    chain.Add(filePath);
-    TObjArray *fileElements=chain.GetListOfFiles();
-    if (fileElements->GetEntries() > 1)  {
-        if (Debug::Inst()->getEnabled()) qDebug() << "Multiple client files found for run " << runNumber;
-        return;
-    }        
-    if (fileElements->GetEntries() == 0) {
-        if (Debug::Inst()->getEnabled()) qDebug() << "No client file found for run " << runNumber;
-        return;
-    }        
-    
-    TIter thefile(fileElements);
-    TChainElement* chEl= (TChainElement*)thefile();
-    clientFile = TFile::Open(chEl->GetTitle());
-    if (!clientFile || !clientFile->IsOpen()) {
-        if (Debug::Inst()->getEnabled()) qDebug() << "Unable to open client file " << chEl->GetTitle();
-        return;
-    }        
-    else {
-        if (Debug::Inst()->getEnabled()) qDebug() << "Client file for run " << runNumber << " successfully opened";
-    }   
-    
-    TDirectory *dir = clientFile->GetDirectory("/DQMData/Collate/SiStrip/ControlView");
-    if (dir == NULL) {
-        if (Debug::Inst()->getEnabled()) qDebug() << "Directory /DQMData/Collate/SiStrip/ControlView does not exist in file" << ' ' << clientFile->GetName();
-        return;
-    }
-    
-    dir->cd();
-    QString title = "SummaryHisto_Histo";
-    TIter nextkey(dir->GetListOfKeys());
-    TKey *key, *oldkey=0;
-    while ((key = (TKey*)nextkey())) {
-        if (oldkey && QString(oldkey->GetName()) != QString(key->GetName())) continue; 	    
-        TObject *obj = key->ReadObj();
-        if (obj) {
-            QString temp(obj->GetName());
-            if(temp.contains(title)) {
-                TH1* hist = static_cast<TH1*>(obj);
-                summaryHists.push_back(hist);
-            } 
-        } 
-        if (Debug::Inst()->getEnabled()) qDebug() << "Object from key " << key->GetName() << " does not exist";
-    } 
-    
-    if (summaryHists.size() == 0) {
-        if (Debug::Inst()->getEnabled()) qDebug() << "Unable to find histogramm(s) for " << title; 
-    }
-    else {
-        if (Debug::Inst()->getEnabled()) qDebug() << "Summary histograms loaded";
-    }
-        
-    cmbSummaryHists->clear();
-    if (summaryHists.size() > 0) {
-        for (int i = 0; i < summaryHists.size(); i++) {
-            std::string sumHistCmbName(summaryHists[i]->GetName());
-            cmbSummaryHists->addItem(sumHistCmbName.substr(sumHistCmbName.find_last_of('_')+1).c_str(), summaryHists[i]->GetName());
+    if (axis == _dimX) cmbX->addItem(none, QString(""));
+    if (axis == _dimY) cmbY->addItem(none, QString(""));
+    if (axis == _dimZ) cmbZ->addItem(none, QString(""));
+   
+    if (isCurrent) {   
+        for(std::size_t i = 0; i < varList.size(); i++) {
+            if (axis == _dimX) cmbX->addItem(varList[i].first.toStdString().c_str(), varList[i].second.toStdString().c_str());
+            if (axis == _dimY) cmbY->addItem(varList[i].first.toStdString().c_str(), varList[i].second.toStdString().c_str());
+            if (axis == _dimZ) cmbZ->addItem(varList[i].first.toStdString().c_str(), varList[i].second.toStdString().c_str());
         }
     }
-
-    btnShowSummary->setEnabled(true);
-    cmbSummaryHists->setEnabled(true);
+    else {
+        for(std::size_t i = 0; i < refVarList.size(); i++) {
+            if (axis == _dimX) cmbX->addItem(refVarList[i].first.toStdString().c_str(), varList[i].second.toStdString().c_str());
+            if (axis == _dimY) cmbY->addItem(refVarList[i].first.toStdString().c_str(), varList[i].second.toStdString().c_str());
+            if (axis == _dimZ) cmbZ->addItem(refVarList[i].first.toStdString().c_str(), varList[i].second.toStdString().c_str());
+        }
+    }
 }
 
 void TreeViewer::draw(bool firstDraw, bool is1D) {
-    gStyle->SetOptStat("mrie");
-    gStyle->SetStatColor(0);
     double xcurrentmin = getCanvas()->PadtoX(getCanvas()->GetUxmin());            
     double xcurrentmax = getCanvas()->PadtoX(getCanvas()->GetUxmax() - 1e-6);            
     double ycurrentmin = getCanvas()->PadtoY(getCanvas()->GetUymin());            
@@ -268,66 +173,51 @@ void TreeViewer::draw(bool firstDraw, bool is1D) {
     TH1* oldh2 = (TH1*)gDirectory->Get("h2");
     if (oldh2) oldh2->Delete();
 
-    lblInfo->setText(QString("Drawing: ")+curDrawX+QString(" ")+curDrawY+QString(" ")+curDrawZ);
-    TTree* tree = NULL; 
-    if (treeInfo.getCurrentTree()) tree = treeInfo.getCurrentTree();
+    TTree* tree = treebuilder.getCurrentTree(); 
     if (!tree) {
-        if (Debug::Inst()->getEnabled()) qDebug() << "Unable to get hold of the tree";
+        std::cerr << "Unable to get hold of the tree" << std::endl;
         return;
     }
 
-    if (firstDraw) {
-        cutString = "";
-        invChecked = chkShowInvalid->isChecked();
-    }
-    TEventList evtlist("eventList", "eventList");
+    if (firstDraw) cutString = "";
+    treebuilder.getEventList()->Reset();
 
     QString drawString = getDrawString("h1");
-    if (Debug::Inst()->getEnabled()) {
-        qDebug() << "CutString : " << cutString;
-        qDebug() << "DrawString: " << drawString;
-    }
+    if(Debug::Inst()->getEnabled()) std::cout << "DrawString: " << drawString.toStdString() << std::endl;
+    lblInfo->setText(QString("Drawing: ")+getDrawString(""));
 
-    getCanvas()->cd();
+    treebuilder.useEventList(false);
     tree->SetMarkerStyle(7);
     tree->SetLineColor(kBlack);
+    tree->SetLineWidth(2);
     tree->SetMarkerColor(kBlack);
-    tree->Draw(qPrintable(drawString), qPrintable(getInvalidCutString(invChecked)), qPrintable(drawOpt));
+    tree->Draw(qPrintable(drawString), "(1)", qPrintable(drawOpt));
 
     TH1* h1 = static_cast<TH1*>(qtCanvas->GetCanvas()->GetPrimitive("h1"));
-    QString xdiffstr = "";
-    QString ydiffstr = "";
-    if (chkDiffX->isChecked()) xdiffstr = "Diff ";
-    if (chkDiffY->isChecked()) ydiffstr = "Diff ";
-
-    if (!h1) {
-        if (Debug::Inst()->getEnabled()) qDebug() << "Unable to extract histogram from the canvas ... quiting draw";
-        return;
-    }
-
-    h1->GetXaxis()->SetTitle(qPrintable(xdiffstr + curX));
-    if (!is1D) h1->GetYaxis()->SetTitle(qPrintable(ydiffstr + curY));
+    h1->GetXaxis()->SetTitle(qPrintable(curX));
+    if (!is1D) h1->GetYaxis()->SetTitle(qPrintable(curY)); 
 
     if (!firstDraw) {
         h1->GetXaxis()->SetRangeUser(xcurrentmin, xcurrentmax);
         h1->GetYaxis()->SetRangeUser(ycurrentmin, ycurrentmax);
 
         QString drawSelectedString;
-        if (is1D) drawSelectedString = getDrawString("h2", h1->GetNbinsX(), h1->GetBinLowEdge(1), h1->GetBinLowEdge(h1->GetNbinsX())+h1->GetBinWidth(h1->GetNbinsX()));
+        if (is1D) drawSelectedString = getDrawString("h2", h1->GetNbinsX(), h1->GetBinLowEdge(1), h1->GetBinLowEdge(h1->GetNbinsX())+h1->GetBinWidth(h1->GetNbinsX())); 
         else drawSelectedString = getDrawString("");
         if(Debug::Inst()->getEnabled()) {
-            qDebug() << "Selection CutString : " << cutString;
-            qDebug() << "Selection DrawString: " << drawSelectedString;
-        }
-        tree->Draw(">>evtlist", qPrintable(cutString + " && " + getInvalidCutString(invChecked)));
-        evtlist.Add((TEventList*)gDirectory->Get("evtlist"));
-        evtlist.Sort();
-        for (int i = 0; i < selMap.size() ; i++) selMap[i] = 0;
-        for (int i = 0; i < evtlist.GetN(); i++) selMap[evtlist.GetEntry(i)] = 1;
+            std::cout << "Selection CutString : " << cutString.toStdString()  << std::endl;
+            std::cout << "Selection DrawString: " << drawSelectedString.toStdString() << std::endl;
+        } 
+        tree->Draw(">>evtlist", qPrintable(cutString));
+        TEventList *evtlist = (TEventList*)gDirectory->Get("evtlist");
+        if (evtlist) evtlist->Sort();
+        if (treebuilder.getEventList()) treebuilder.getEventList()->Sort();
+        treebuilder.getEventList()->Add(evtlist);
         tree->SetLineColor(kRed);
+        tree->SetLineWidth(2);
         tree->SetMarkerColor(kRed);
-        tree->Draw(qPrintable(drawSelectedString), qPrintable(cutString + " && " + getInvalidCutString(invChecked)), qPrintable(drawOpt+" P SAME"));
-
+        tree->Draw(qPrintable(drawSelectedString), qPrintable(cutString), qPrintable(drawOpt+" P SAME"));
+        
         if (is1D) {
             TH1* h2 = static_cast<TH1*>(qtCanvas->GetCanvas()->GetPrimitive("h2"));
             h1->Draw(qPrintable(drawOpt));
@@ -335,19 +225,19 @@ void TreeViewer::draw(bool firstDraw, bool is1D) {
         }
     }
 
-    updateCanvas();
+    update();
     if (firstDraw) {
-        xboundmin = getCanvas()->PadtoX(getCanvas()->GetUxmin());
-        xboundmax = getCanvas()->PadtoX(getCanvas()->GetUxmax() - 1e-6);
-        yboundmin = getCanvas()->PadtoY(getCanvas()->GetUymin());
+        xboundmin = getCanvas()->PadtoX(getCanvas()->GetUxmin());            
+        xboundmax = getCanvas()->PadtoX(getCanvas()->GetUxmax() - 1e-6);            
+        yboundmin = getCanvas()->PadtoY(getCanvas()->GetUymin());            
         yboundmax = getCanvas()->PadtoY(getCanvas()->GetUymax() - 1e-6);
     }
 }
 
-QString TreeViewer::setText(const QString &text, char axis) {
-    if (text == "(NONE)") return QString("");
+QString TreeViewer::setText(const QString &text, unsigned int axis) {
+    if (text == none) return QString("");
     
-    if (axis == 'x') {
+    if (axis == _dimX) {
         int index = cmbX->findText(text);
         if (index == -1) return QString("");
     
@@ -355,7 +245,7 @@ QString TreeViewer::setText(const QString &text, char axis) {
         if (data == QString("TObjString")) return QString(text)+QString(".fString");
         return text;
     }
-    else if (axis == 'y') {
+    else if (axis == _dimY) {
         int index = cmbY->findText(text);
         if (index == -1) return QString("");
     
@@ -373,68 +263,52 @@ QString TreeViewer::setText(const QString &text, char axis) {
     }
 }
 
-void TreeViewer::varChanged(const QString& text, QString &var, int &bins, QSpinBox *box, QLabel *label, char axis) {
-    bool e = (text != "(NONE)");
+void TreeViewer::varChanged(const QString& text, QString &var, int &bins, QSpinBox *box, QLabel *label, unsigned int axis) {
+    bool e = (text != none);
     var = setText(text, axis);
     bins = -1;
     box->setEnabled(e); 
     label->setEnabled(e);
     box->setValue(-1); 
     
-    int dim = 0;
-    if (cmbX->currentText() != "(NONE)") ++dim;
-    if (cmbY->currentText() != "(NONE)") ++dim;
-    if (cmbZ->currentText() != "(NONE)") ++dim;
+    Dimension dim = 0;
+    if (cmbX->currentText() != none) ++dim;
+    if (cmbY->currentText() != none) ++dim;
+    if (cmbZ->currentText() != none) ++dim;
     setDrawOptions(dim);
 }
 
-void TreeViewer::setDrawOptions(int d) {
+void TreeViewer::setDrawOptions(Dimension d) {
     cmbDrawOpt->clear();
-    if (d == 1) {
+    if (d == _1D) {
         cmbDrawOpt->addItem("HIST");  
         cmbDrawOpt->addItem("E");     
         cmbDrawOpt->addItem("HISTTEXT");
     }
-    else if (d == 2) {
+    else if (d == _2D) {
         cmbDrawOpt->addItem("");
         cmbDrawOpt->addItem("COLZ");
     }
-    else if (d == 3) {
+    else if (d == _3D) {
         cmbDrawOpt->addItem("");
         cmbDrawOpt->addItem("COLZ");
     }
     return;
 }
 
-QString TreeViewer::getInvalidCutString(bool showInvalid) {
-    QString cutstr = "(";
-    if (!showInvalid) {
-        if (!curX.contains("fString")) cutstr += QString("TMath::Abs(")+ curDrawX +QString(" - 65535) > 1e-6");
-        else cutstr += "1";
-        if (!curY.isEmpty() && !curY.contains("fString") ) cutstr += " && " +QString("TMath::Abs(")+ curDrawY +QString(" - 65535) > 1e-6");
-        if (!curZ.isEmpty() && !curZ.contains("fString") ) cutstr += " && " +QString("TMath::Abs(")+ curDrawZ +QString(" - 65535) > 1e-6");
-    }
-    else cutstr += "1";
-    
-    cutstr += ")";
-
-    return cutstr;
-}
-
-QString TreeViewer::getDimString(char axis) {
-
+QString TreeViewer::getDimString(unsigned int axis) {
     QString base;
     QString dimstring;
 
     bool isDiffEnabled = false;
     bool isRefEnabled  = false;
 
-    if (axis == 'x') {
+    if (axis == _dimX) {
         base = X;
         if (chkDiffX->isChecked()) isDiffEnabled = true;
         if (chkRefX ->isChecked()) isRefEnabled  = true;
     }        
-    else if (axis == 'y') {
+    else if (axis == _dimY) {
         base = Y;
         if (chkDiffY->isChecked()) isDiffEnabled = true;
         if (chkRefY ->isChecked()) isRefEnabled  = true;
@@ -484,14 +358,9 @@ QString TreeViewer::getDrawString(QString histname, unsigned int bins, double mi
         drawString += ">>";
         drawString += histname;
         if (bins > 0) {
-            QString hists = "(";
-            hists += bins;
-            hists += ",";
-            hists += min;
-            hists += ",";
-            hists += max;
-            hists += ")";
-            drawString += hists;
+            std::stringstream histss;
+            histss << "(" << bins << "," << min << "," << max << ")";
+            drawString += histss.str().c_str();
         }
     }
 
@@ -499,18 +368,18 @@ QString TreeViewer::getDrawString(QString histname, unsigned int bins, double mi
 }
 
 void TreeViewer::on_btnDraw_clicked() {
-    if ((X == "(NONE)" || X.isEmpty()) && (Y == "(NONE)" || Y.isEmpty()) && (Z == "(NONE)" || Z.isEmpty())) {
-        if (Debug::Inst()->getEnabled()) qDebug() << "You need to select a variable to plot.";
+    if ((X == none || X.isEmpty()) && (Y == none || Y.isEmpty()) && (Z == none || Z.isEmpty())) {
+        if(Debug::Inst()->getEnabled()) std::cout << "You need to select a variable to plot." << std::endl;
         QMessageBox::warning(this, "Plotting Error", "You need to select a variable to plot.", QMessageBox::Ok, QMessageBox::Ok);
         return;
     }
-    if ((X == "(NONE)" || X.isEmpty()) && ((Y != "(NONE)" && !Y.isEmpty()) || (Z != "(NONE)" && !Z.isEmpty()))) {
-        if (Debug::Inst()->getEnabled()) qDebug() << "The x-axis needs to be always defined.";
+    if ((X == none || X.isEmpty()) && ((Y != none && !Y.isEmpty()) || (Z != none && !Z.isEmpty()))) {
+        if(Debug::Inst()->getEnabled()) std::cout << "The x-axis needs to be always defined." << std::endl;
         QMessageBox::warning(this, "Plotting Error", "The x-axis needs to be always defined.", QMessageBox::Ok, QMessageBox::Ok);
         return;
     }        
-    if ((X != "(NONE)" && !X.isEmpty()) && (Y == "(NONE)" || Y.isEmpty()) && (Z != "(NONE)" && !Z.isEmpty())) {
-        if (Debug::Inst()->getEnabled()) qDebug() << "The y-axis needs to be defined for a 2D plot.";
+    if ((X != none && !X.isEmpty()) && (Y == none || Y.isEmpty()) && (Z != none && !Z.isEmpty())) {
+        if(Debug::Inst()->getEnabled()) std::cout << "The y-axis needs to be defined for a 2D plot." << std::endl;
         QMessageBox::warning(this, "Plotting Error", "The y-axis needs to be defined for a 2D plot.", QMessageBox::Ok, QMessageBox::Ok);
         return;
     }        
@@ -519,9 +388,9 @@ void TreeViewer::on_btnDraw_clicked() {
     curY = Y;
     curZ = Z;
 
-    curDrawX = getDimString('x');
-    curDrawY = getDimString('y');
-    curDrawZ = getDimString('z');
+    curDrawX = getDimString(_dimX);
+    curDrawY = getDimString(_dimY);
+    curDrawZ = getDimString(_dimZ);
 
     curRefX = chkRefX->isChecked();
     curRefY = chkRefY->isChecked();
@@ -531,104 +400,38 @@ void TreeViewer::on_btnDraw_clicked() {
     curDiffY = chkDiffY->isChecked();
     curDiffZ = chkDiffZ->isChecked();
 
-    if (!treeInfo.getCurrentTree() || selMap.size() != treeInfo.getCurrentTree()->GetEntries()) {
-        if (Debug::Inst()->getEnabled()) qDebug() << "Unable to setup the selection map";
-        return;
-    }
-    else {
-        for (int i = 0; i < selMap.size(); i++) selMap[i] = 0;
-    }
-
-    if ((Y != "(NONE)" && !Y.isEmpty()) || (Z != "(NONE)" && !Z.isEmpty())) qtCanvas->setLockY(false);
+    if ((Y != none && !Y.isEmpty()) || (Z != none && !Z.isEmpty())) qtCanvas->setLockY(false);
     else qtCanvas->setLockY(true);
 
     drawOpt = cmbDrawOpt->currentText(); 
 
-    draw(true, (Y == "(NONE)" || Y.isEmpty()) && (Z == "(NONE)" || Z.isEmpty()));
+    draw(true, (Y == none || Y.isEmpty()) && (Z == none || Z.isEmpty()));
 
     btnPrintToFile->setEnabled(true);
-    if (treeInfo.getCurrentRunNumber().toInt() != sistrip::CURRENTSTATE && treeInfo.getCurrentRunNumber().toInt() != sistrip::LASTO2O) btnGetSelected->setEnabled(true);
+    btnGetSelected->setEnabled(true);
     cmbCutOpt->setEnabled(true);
     chkSelMode->setEnabled(true);
-}
-
-void TreeViewer::on_btnRef_clicked() {
-    if (treeInfo.getCurrentRunNumber().isEmpty() || treeInfo.getCurrentPartition().isEmpty()) {
-        if (Debug::Inst()->getEnabled()) qDebug() << "Unable to get the ID of the current run";
-        return;
-    }        
-
-    ReferenceChooser* refchooser = new ReferenceChooser();
-    refchooser->addReferenceRuns(treeInfo.getCurrentPartition(), treeInfo.getCurrentRunNumber());
-    connect(refchooser, SIGNAL(refSignal(QString, QString, bool)), this, SLOT(catchRef(QString, QString, bool)));
-    refchooser->show();
-}
-
-void TreeViewer::on_btnShowSummary_clicked() {
-    if (summaryHists.size() == 0) {
-        if (Debug::Inst()->getEnabled()) qDebug() << "Unable to find summary histogramm(s)"; 
-    }
-    else {
-        getCanvas()->cd();
-        for (int i = 0; i < summaryHists.size(); i++) {
-            if (cmbSummaryHists->itemData(cmbSummaryHists->currentIndex()).toString() == summaryHists[i]->GetName()) summaryHists[i]->Draw();   
-        }
-        updateCanvas();
-    }
-    btnPrintToFile->setEnabled(true);
-    if (chkSelMode->isChecked()) chkSelMode->setCheckState(Qt::Unchecked);
-    chkSelMode->setEnabled(false);
-    btnGetSelected->setEnabled(false);
-    cmbCutOpt->setEnabled(false);
 }
 
 void TreeViewer::on_btnPrintToFile_clicked() {
     char* curDir;
     curDir = getenv("PWD");
     QString saveFileName = (QFileDialog::getSaveFileName(this, tr("Save Image"), curDir, tr("Image files (*.png *.jpg)")));
-    if (Debug::Inst()->getEnabled()) qDebug() << saveFileName;
+    if(Debug::Inst()->getEnabled()) std::cout << saveFileName.toStdString() << std::endl;
     if (saveFileName == NULL) return;
     else getCanvas()->Print(saveFileName.toStdString().c_str());
 }
 
-void TreeViewer::on_btnRunInfo_clicked() {
-    if (treeInfo.getCurrentRunNumber().toInt() != sistrip::CURRENTSTATE && treeInfo.getCurrentRunNumber().toInt() != sistrip::LASTO2O) {
-        RunInfo* runInfo = new RunInfo();
-        runInfo->setCurrentRun(treeInfo.getCurrentRunNumber());
-        runInfo->displayRunInfo();
-        emit showTabSignal(runInfo, "Run Info");
-    }
-}
-
-void TreeViewer::on_btnGetSelected_clicked() {
-    TTree* tree = NULL; 
-    if (treeInfo.getCurrentTree()) tree = treeInfo.getCurrentTree();
-    if (!tree) {
-        if (Debug::Inst()->getEnabled()) qDebug() << "Unable to get hold of the tree";
-        return;
-    }
-    QVector<int> smap;
-    if (selMap.size() > 0) smap = selMap;   
-    else {
-        if (Debug::Inst()->getEnabled()) qDebug() << "Invalid selection map";
-        return;
-    }
-
-    SelectionDetails* details = new SelectionDetails(NULL, treeInfo);
-    details->populate(tree, smap, curX);
-    emit showTabSignal(details, "Selection Info");
-}
-
 void TreeViewer::on_cmbX_currentIndexChanged(const QString & text) { 
-    varChanged(text, X, xBins, xSpinBins, lblXBins, 'x'); 
+    varChanged(text, X, xBins, xSpinBins, lblXBins, _dimX); 
 }
 
 void TreeViewer::on_cmbY_currentIndexChanged(const QString & text) { 
-    varChanged(text, Y, yBins, ySpinBins, lblYBins, 'y'); 
+    varChanged(text, Y, yBins, ySpinBins, lblYBins, _dimY); 
 }
 
 void TreeViewer::on_cmbZ_currentIndexChanged(const QString & text) { 
-    varChanged(text, Z, zBins, zSpinBins, lblZBins, 'z'); 
+    varChanged(text, Z, zBins, zSpinBins, lblZBins, _dimZ); 
 }
 
 void TreeViewer::on_xSpinBins_valueChanged(int bins) { 
@@ -652,50 +455,44 @@ void TreeViewer::on_chkLogX_stateChanged(int state) {
     yboundmin = getCanvas()->PadtoY(getCanvas()->GetUymin());            
     yboundmax = getCanvas()->PadtoY(getCanvas()->GetUymax() - 1e-6); 
 
-    updateCanvas();
+    update();
 }
 
 void TreeViewer::on_chkLogY_stateChanged(int state) {
     if (state == Qt::Unchecked) getCanvas()->SetLogy(0);
     else {
         TH1* h1 = static_cast<TH1*>(qtCanvas->GetCanvas()->GetPrimitive("h1"));
-        if (h1 != NULL && yboundmin == 0) h1->GetYaxis()->SetRangeUser(1e-1, yboundmax);
+        if (yboundmin == 0) h1->GetYaxis()->SetRangeUser(1e-1, yboundmax);
         getCanvas()->SetLogy(1);
-    }
+    }        
 
     xboundmin = getCanvas()->PadtoX(getCanvas()->GetUxmin());            
     xboundmax = getCanvas()->PadtoX(getCanvas()->GetUxmax() - 1e-6);            
     yboundmin = getCanvas()->PadtoY(getCanvas()->GetUymin());            
     yboundmax = getCanvas()->PadtoY(getCanvas()->GetUymax() - 1e-6); 
 
-    updateCanvas();
+    update();
 }
 
 void TreeViewer::on_chkLogZ_stateChanged(int state) {
     if (state == Qt::Unchecked) getCanvas()->SetLogz(0);
     else getCanvas()->SetLogz(1);
-    updateCanvas();
+    update();
 }
 
 void TreeViewer::on_chkRefX_stateChanged(int state) {
-    if (state != Qt::Unchecked) fillBranchNames(false, 'x');
-    else fillBranchNames(true, 'x');
+    if (state != Qt::Unchecked) fillBranchNames(false, _dimX);
+    else fillBranchNames(true, _dimX);
 }
 
 void TreeViewer::on_chkRefY_stateChanged(int state) {
-    if (state != Qt::Unchecked) fillBranchNames(false, 'y');
-    else fillBranchNames(true, 'y');
+    if (state != Qt::Unchecked) fillBranchNames(false, _dimY);
+    else fillBranchNames(true, _dimY);
 }
 
 void TreeViewer::on_chkRefZ_stateChanged(int state) {
-    if (state != Qt::Unchecked) fillBranchNames(false, 'z');
-    else fillBranchNames(true, 'z');
-}
-
-void TreeViewer::catchRef(QString refpart, QString refrun, bool sametype) {
-    if (Debug::Inst()->getEnabled()) qDebug() << "Ref. Partition : " << refpart << ", Ref. run: " << refrun;
-    sameRefRunType = sametype;
-    if (!refpart.isEmpty() && !refrun.isEmpty()) addRun(refpart, refrun, false);
+    if (state != Qt::Unchecked) fillBranchNames(false, _dimZ);
+    else fillBranchNames(true, _dimZ);
 }
 
 void TreeViewer::catchSelect(QPoint origin, QPoint endpoint) {
@@ -728,7 +525,7 @@ void TreeViewer::catchSelect(QPoint origin, QPoint endpoint) {
             if (h1) {
                 h1->GetXaxis()->SetRangeUser(xmin, xmax);
                 h1->GetYaxis()->SetRangeUser(ymin, ymax);
-                updateCanvas();
+                update();
                 return;
             }
         }
@@ -739,7 +536,7 @@ void TreeViewer::catchSelect(QPoint origin, QPoint endpoint) {
 
     if (drawOpt == "COLZ") return;
 
-    if ((curY == "(NONE)" || curY.isEmpty()) && (curZ == "(NONE)" || curZ.isEmpty())) {
+    if ((curY == none || curY.isEmpty()) && (curZ == none || curZ.isEmpty())) {
         double xmin = getCanvas()->AbsPixeltoX(origin.x() < endpoint.x() ? origin.x() : endpoint.x());
         double xmax = getCanvas()->AbsPixeltoX(origin.x() > endpoint.x() ? origin.x() : endpoint.x());
         if (getCanvas()->GetLogx()) {
@@ -749,26 +546,26 @@ void TreeViewer::catchSelect(QPoint origin, QPoint endpoint) {
 
         TH1* hist = (TH1*)getCanvas()->GetPrimitive("h1");
         if (!hist) {
-            if (Debug::Inst()->getEnabled()) qDebug() << "Unable to get hold of the histogram";
+            std::cerr << "Unable to get hold of the histogram" << std::endl;
             return;
         }
-
+        
         double xminedge = hist->GetBinLowEdge(hist->FindBin(xmin));
         double xmaxedge = hist->GetBinLowEdge(hist->FindBin(xmax)) + hist->GetBinWidth(hist->FindBin(xmax));
-
+        
         if (xmin == xmax) return;
-
-        if (Debug::Inst()->getEnabled()) qDebug() << curX << "[" << xminedge << ", " << xmaxedge << ")";
-
+        
+        if(Debug::Inst()->getEnabled()) std::cout << curX.toStdString() << "[" << xminedge << ", " << xmaxedge << ")" << std::endl;
+        
         QString varx, cvarx, rvarx;
         cvarx = curX.toStdString().c_str();
         rvarx = QString("ref.") + curX.toStdString().c_str();
-
+        
         if      ( curRefX &&  curDiffX) varx = "(" + rvarx + " - " + cvarx + ")";
         else if ( curRefX && !curDiffX) varx = rvarx;
         else if (!curRefX &&  curDiffX) varx = "(" + cvarx + " - " + rvarx + ")";
         else                            varx = cvarx;
-
+        
         cutString.prepend("(");
         if (cmbCutOpt->currentText() == "select") {
             if (cutString != "(") cutString += " || ";
@@ -782,8 +579,7 @@ void TreeViewer::catchSelect(QPoint origin, QPoint endpoint) {
 
         draw(false, true);
     }
-
-    else if (curY != "(NONE)" && !curY.isEmpty()) {
+    else if (curY != none && !curY.isEmpty()) {
         double xmin = getCanvas()->AbsPixeltoX(origin.x() < endpoint.x() ? origin.x() : endpoint.x());
         double xmax = getCanvas()->AbsPixeltoX(origin.x() > endpoint.x() ? origin.x() : endpoint.x());
 
@@ -807,32 +603,32 @@ void TreeViewer::catchSelect(QPoint origin, QPoint endpoint) {
         }
 
         if (xmin == xmax || ymin == ymax) return;
-
-        if (Debug::Inst()->getEnabled()) qDebug() << curX << "[" << xmin << ", " << xmax << ")";
-        if (Debug::Inst()->getEnabled()) qDebug() << curY << "[" << ymin << ", " << ymax << ")";
-
+        
+        if(Debug::Inst()->getEnabled()) std::cout << curX.toStdString() << "[" << xmin << ", " << xmax << ")" << std::endl;
+        if(Debug::Inst()->getEnabled()) std::cout << curY.toStdString() << "[" << ymin << ", " << ymax << ")" << std::endl;
+        
         QString varx, cvarx, rvarx;
         QString vary, cvary, rvary;
         cvarx = curX.toStdString().c_str();
         cvary = curY.toStdString().c_str();
         rvarx = QString("ref.") + curX.toStdString().c_str();
         rvary = QString("ref.") + curY.toStdString().c_str();
-
+        
         if      ( curRefX &&  curDiffX) varx = "(" + rvarx + " - " + cvarx + ")";
         else if ( curRefX && !curDiffX) varx = rvarx;
         else if (!curRefX &&  curDiffX) varx = "(" + cvarx + " - " + rvarx + ")";
         else                            varx = cvarx;
-
+        
         if      ( curRefY &&  curDiffY) vary = "(" + rvary + " - " + cvary + ")";
         else if ( curRefY && !curDiffY) vary = rvary;
         else if (!curRefY &&  curDiffY) vary = "(" + cvary + " - " + rvary + ")";
         else                            vary = cvary;
-
+        
         cutString.prepend("(");
         if (cmbCutOpt->currentText() == "select") {
             if (cutString != "(") cutString += " || ";
             cutString += "(";
-            cutString += varx + " >= " + QString::number(xmin) + " && " + varx + " < "  + QString::number(xmax);
+            cutString += varx + " >= " + QString::number(xmin) + " && " + varx + " < "  + QString::number(xmax); 
             cutString += " && ";
             cutString += vary + " >= " + QString::number(ymin) + " && " + vary + " < "  + QString::number(ymax);
             cutString += ")";
@@ -840,7 +636,7 @@ void TreeViewer::catchSelect(QPoint origin, QPoint endpoint) {
         else {
             if (cutString != "(") cutString += " && ";
             cutString += "(";
-            cutString += varx + " < "  + QString::number(xmin) + " || " + varx + " >= " + QString::number(xmax);
+            cutString += varx + " < "  + QString::number(xmin) + " || " + varx + " >= " + QString::number(xmax); 
             cutString += " || ";
             cutString += vary + " < "  + QString::number(ymin) + " || " + vary + " >= " + QString::number(ymax);
             cutString += ")";
@@ -857,8 +653,17 @@ void TreeViewer::catchZoomout() {
     if (h1) {
         if (xboundmin != getCanvas()->PadtoX(getCanvas()->GetUxmin()) || xboundmax != getCanvas()->PadtoX(getCanvas()->GetUxmax()) - 1e-6) h1->GetXaxis()->SetRangeUser(xboundmin, xboundmax);
         if (yboundmin != getCanvas()->PadtoY(getCanvas()->GetUymin()) || yboundmax != getCanvas()->PadtoY(getCanvas()->GetUymax()) - 1e-6) h1->GetYaxis()->SetRangeUser(yboundmin, yboundmax);
-        updateCanvas();
+        update();
         return;
+    }
+}
+
+void TreeViewer::on_btnGetSelected_clicked() {
+    treebuilder.useEventList(true);
+    if (treebuilder.getCurrentTree()) {
+        SelectionDetails* details = new SelectionDetails();
+        details->populate(treebuilder.getCurrentTree(), treebuilder.getEventList());
+        emit showTabSignal(details, "Selection Info");
     }
 }
 
@@ -867,26 +672,10 @@ void TreeViewer::on_btnTkMap_clicked() {
         QMessageBox::warning(this, "Tracker Map Error", "You need to draw a variable before making the tracker map", QMessageBox::Ok, QMessageBox::Ok);
         return;
     }
-
-    TkMap* tkmap = new TkMap(0, treeInfo.getCurrentTree(), selMap, curX, xboundmin, xboundmax, treeInfo.getCurrentRunNumber());
-    emit showTabSignal(tkmap, "Tracker Map");
-}
-
-void TreeViewer::on_btnFedMap_clicked() {
-    TTree* tree = NULL; 
-    if (treeInfo.getCurrentTree()) tree = treeInfo.getCurrentTree();
-    if (!tree) {
-        if (Debug::Inst()->getEnabled()) qDebug() << "Unable to get hold of the tree";
-        return;
-    }
-    QVector<int> smap;
-    if (selMap.size() > 0) smap = selMap;   
-    else {
-        if (Debug::Inst()->getEnabled()) qDebug() << "Invalid selection map";
-        return;
+    if (treebuilder.getCurrentTree()) {
+        TkMap* tkmap = new TkMap(0, treebuilder.getCurrentTree(), treebuilder.getEventList(), curX, xboundmin, xboundmax);
+        emit showTabSignal(tkmap, "Tracker Map");
     }
 
-    FedMap* fmap = new FedMap(smap, QPair<QString, QString>(treeInfo.getCurrentPartition(), treeInfo.getCurrentRunNumber()), tree);
-    emit showTabSignal(fmap, "FED Map");
 }
 
