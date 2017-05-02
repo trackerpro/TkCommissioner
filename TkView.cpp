@@ -82,10 +82,10 @@ void GraphicsView::drawBackground(QPainter *painter, const QRectF &rect)
     getColor( M::m()->min()+i*(M::m()->range()/gStyle->GetNumberOfColors()),r,g,b);
     if( scene() ) {
       if( i % 5 == 0 ) {
-	painter->drawText(3050, -210-i*20, QString::number(M::m()->min()+i*(M::m()->range()/gStyle->GetNumberOfColors()),'g',3) );
+	painter->drawText(4400, -210-i*20, QString::number(M::m()->min()+i*(M::m()->range()/gStyle->GetNumberOfColors()),'g',3) );
       }
       painter->setBrush(QColor::fromRgbF(r,g,b));
-      painter->drawRect(3000, -200-i*20,30,20);
+      painter->drawRect(4350, -200-i*20,30,20);
     }
   }
   painter->scale(1,-1);
