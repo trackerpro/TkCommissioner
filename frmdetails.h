@@ -8,6 +8,8 @@
 #include <QVector>
 
 #include <TTree.h>
+#include <utility>
+#include <map>
 
 #include "TreeViewerRunInfo.h"
 
@@ -33,8 +35,12 @@ class SelectionDetails : public QConnectedTabWidget, private Ui::SelectionDetail
         void on_btnTagSelected_clicked();
         void on_btnShowSource_clicked();
         void on_btnShowTrend_clicked();
+        void on_btnSave_clicked();
 
     private:
+        QVector<QStandardItem*> getSelectedList();
+        std::map<int, std::string> dbTags;
+
         QStandardItemModel* selModel;
         QStandardItemModel* tagModel;
         QStandardItemModel* curModel;
@@ -42,5 +48,7 @@ class SelectionDetails : public QConnectedTabWidget, private Ui::SelectionDetail
         QString var;
         QString run;
         QString refrun;
+
+        std::multimap<int, std::pair<int,QStandardItem*> > openTktMap;
 };
 #endif

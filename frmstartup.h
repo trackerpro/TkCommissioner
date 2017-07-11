@@ -121,6 +121,11 @@ class Startup : public QConnectedTabWidget, private Ui::Startup {
         void on_btnPrepareGlobal_clicked();
 
         /**
+         * Perform timing O2O
+         */ 
+        void on_btnTimingO2O_clicked();
+
+        /**
          * slot that will be called if the active run number in the runView
          * TableView. Checks whether this run has already been analyzed and
          * if so, will enable button to view results.

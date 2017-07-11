@@ -36,7 +36,7 @@ class TreeViewer : public QConnectedTabWidget, private Ui::TreeViewer {
         void on_btnShowSummary_clicked();
         void on_btnPrintToFile_clicked();
         void on_btnRef_clicked();
-        void on_btnRunInfo_clicked();
+        void on_btnDBUpload_clicked();
         void on_btnGetSelected_clicked();
         void on_btnTkMap_clicked();
         void on_btnFedMap_clicked();

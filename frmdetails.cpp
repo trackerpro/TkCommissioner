@@ -17,9 +17,11 @@
 #include <QDateTime>
 #include <QMap>
 #include <QPair>
+#include <QFileDialog>
 
 #include <TBranch.h>
 #include <TGraph.h>
+#include <fstream>
 
 #include "Debug.h"
 #include "cmssw/SiStripFedKey.h"
@@ -57,7 +59,10 @@ void SelectionDetails::populate(TTree* tree, const QVector<int>& sel, const QStr
     tagqueryss << "select distinct TAGNUMBER,TAGDESCRIPTION from TkAnalysisTag where tagnumber <> 0 order by tagnumber";
     QSqlQuery tagquery(myTagQuery);
 
-    while(tagquery.next()) cmbTagList->addItem(tagquery.value(1).toString(), tagquery.value(0).toString()); 
+    while(tagquery.next()) {
+        cmbTagList->addItem(tagquery.value(1).toString(), tagquery.value(0).toString()); 
+        dbTags[tagquery.value(0).toInt()] = tagquery.value(1).toString().toStdString();
+    }
 
     QStringList headerLabels;
     headerLabels << "DeviceId";
@@ -79,26 +84,14 @@ void SelectionDetails::populate(TTree* tree, const QVector<int>& sel, const QStr
     headerLabels << "Selected";
     selModel->setHorizontalHeaderLabels(headerLabels);
 
-    TBranch* bdevId          = tree->GetBranch("DeviceId");
-    TBranch* bvar            = tree->GetBranch(varname.toStdString().c_str());
-    TBranch* bpower          = tree->GetBranch("Power");
-    TBranch* bdetId          = tree->GetBranch("Detid");
-    TBranch* bFecCrate       = tree->GetBranch("FecCrate");
-    TBranch* bFec            = tree->GetBranch("Fec");
-    TBranch* bRing           = tree->GetBranch("Ring");
-    TBranch* bCcu            = tree->GetBranch("Ccu");
-    TBranch* bCcuArrangement = tree->GetBranch("CcuArrangement");
-    TBranch* bI2CChannel     = tree->GetBranch("I2CChannel");
-    TBranch* bI2CAddress     = tree->GetBranch("I2CAddress");
-    TBranch* blasChan        = tree->GetBranch("lasChan");
-    TBranch* bFedId          = tree->GetBranch("FedId");
-    TBranch* bFeUnit         = tree->GetBranch("FeUnit");
-    TBranch* bFeChan         = tree->GetBranch("FeChan");
-    TBranch* bFeApv          = tree->GetBranch("FeApv");
-
+    TObjString* detector  = new TObjString("");
     double devId          = 0.0;
     double var            = 0.0;
     double power          = 0.0;
+    double side           = 0.0;
+    double layer          = 0.0;
+    double cl             = 0.0;
+    double cr             = 0.0;
     double detId          = 0.0;
     double FecCrate       = 0.0;
     double Fec            = 0.0;
@@ -113,45 +106,47 @@ void SelectionDetails::populate(TTree* tree, const QVector<int>& sel, const QStr
     double FeChan         = 0.0;
     double FeApv          = 0.0;
 
-    bdevId         ->SetAddress(&devId);   
-    bvar           ->SetAddress(&var);
-    bpower         ->SetAddress(&power);
-    bdetId         ->SetAddress(&detId);
-    bFecCrate      ->SetAddress(&FecCrate);
-    bFec           ->SetAddress(&Fec);
-    bRing          ->SetAddress(&Ring);
-    bCcu           ->SetAddress(&Ccu);
-    bCcuArrangement->SetAddress(&CcuArrangement);
-    bI2CChannel    ->SetAddress(&I2CChannel);
-    bI2CAddress    ->SetAddress(&I2CAddress);
-    blasChan       ->SetAddress(&lasChan);
-    bFedId         ->SetAddress(&FedId);
-    bFeUnit        ->SetAddress(&FeUnit);
-    bFeChan        ->SetAddress(&FeChan);
-    bFeApv         ->SetAddress(&FeApv);
+    tree->SetBranchAddress("Detector"                   , &detector);   
+    tree->SetBranchAddress("DeviceId"                   , &devId);   
+    tree->SetBranchAddress(varname.toStdString().c_str(), &var);
+    tree->SetBranchAddress("Power"                      , &power);
+    tree->SetBranchAddress("Side"                       , &side);
+    tree->SetBranchAddress("Layer"                      , &layer);
+    tree->SetBranchAddress("Cl"                         , &cl);
+    tree->SetBranchAddress("Cr"                         , &cr);
+    tree->SetBranchAddress("Detid"                      , &detId);
+    tree->SetBranchAddress("FecCrate"                   , &FecCrate);
+    tree->SetBranchAddress("Fec"                        , &Fec);
+    tree->SetBranchAddress("Ring"                       , &Ring);
+    tree->SetBranchAddress("Ccu"                        , &Ccu);
+    tree->SetBranchAddress("CcuArrangement"             , &CcuArrangement);
+    tree->SetBranchAddress("I2CChannel"                 , &I2CChannel);
+    tree->SetBranchAddress("I2CAddress"                 , &I2CAddress);
+    tree->SetBranchAddress("lasChan"                    , &lasChan);
+    tree->SetBranchAddress("FedId"                      , &FedId);
+    tree->SetBranchAddress("FeUnit"                     , &FeUnit);
+    tree->SetBranchAddress("FeChan"                     , &FeChan);
+    tree->SetBranchAddress("FeApv"                      , &FeApv);
 
     for(int i = 0; i < tree->GetEntries(); i++) {
         QList<QStandardItem*> list;
-        bdevId         ->GetEvent(i);
-        bvar           ->GetEvent(i);
-        bpower         ->GetEvent(i);
-        bdetId         ->GetEvent(i);
-        bFecCrate      ->GetEvent(i);
-        bFec           ->GetEvent(i);
-        bRing          ->GetEvent(i);
-        bCcu           ->GetEvent(i);
-        bCcuArrangement->GetEvent(i);
-        bI2CChannel    ->GetEvent(i);
-        bI2CAddress    ->GetEvent(i);
-        blasChan       ->GetEvent(i);
-        bFedId         ->GetEvent(i);
-        bFeUnit        ->GetEvent(i);
-        bFeChan        ->GetEvent(i);
-        bFeApv         ->GetEvent(i);
+        tree->GetEntry(i);
+
+        QString powerstr = QString(detector->GetString().Data());
+        powerstr += ".";
+        powerstr += QString::number(side);
+        powerstr += ".";
+        powerstr += QString::number(layer);
+        powerstr += ".";
+        powerstr += QString::number(cl);
+        powerstr += ".";
+        powerstr += QString::number(cr);
+        powerstr += ".";
+        powerstr += QString::number(power);
 
         QStandardItem* idevId          = new QStandardItem(QString::number(devId, 'g', 20));
         QStandardItem* ivar            = new QStandardItem(QString::number(var));
-        QStandardItem* ipower          = new QStandardItem(QString::number(power));
+        QStandardItem* ipower          = new QStandardItem(powerstr);
         QStandardItem* idetId          = new QStandardItem(QString::number(detId, 'g', 20));
         QStandardItem* iFecCrate       = new QStandardItem(QString::number(FecCrate));
         QStandardItem* iFec            = new QStandardItem(QString::number(Fec));
@@ -197,7 +192,9 @@ void SelectionDetails::populate(TTree* tree, const QVector<int>& sel, const QStr
                                          .arg(query.value(5).toString())
                                          .arg(query.value(6).toDate().toString())
                                          .arg(query.value(6).toTime().toString());
-                idevId->appendRow(new QStandardItem(str));
+                QStandardItem* otkt = new QStandardItem(str);
+                idevId->appendRow(otkt);
+	            openTktMap.insert(std::pair<int,std::pair<int,QStandardItem*> >(query.value(1).toInt(),std::make_pair(query.value(7).toInt(),otkt)));
             }
         }
 
@@ -232,23 +229,16 @@ void SelectionDetails::populate(TTree* tree, const QVector<int>& sel, const QStr
     for (int i = 0; i < 16; i++) listSelection->resizeColumnToContents(i);
     listSelection->collapseAll();
 
-    bdevId          ->ResetAddress();
-    bvar            ->ResetAddress();
-    bpower          ->ResetAddress();
-    bdetId          ->ResetAddress();
-    bFecCrate       ->ResetAddress();
-    bFec            ->ResetAddress();
-    bRing           ->ResetAddress();
-    bCcu            ->ResetAddress();
-    bCcuArrangement ->ResetAddress();
-    bI2CChannel     ->ResetAddress();
-    bI2CAddress     ->ResetAddress();
-    blasChan        ->ResetAddress();
-    bFedId          ->ResetAddress();
-    bFeUnit         ->ResetAddress();
-    bFeChan         ->ResetAddress();
-    bFeApv          ->ResetAddress();
+}
 
+QVector<QStandardItem*> SelectionDetails::getSelectedList() {
+    QVector<QStandardItem*> selectedList;
+    for (int i = 0; i < selModel->rowCount(); i++) {
+        if (selModel->item(i, 0)->checkState() == Qt::Checked) {
+            selectedList.push_back(new QStandardItem(selModel->item(i, 0)->text()));
+        }
+    }
+    return selectedList;
 }
 
 void SelectionDetails::on_btnSelectAll_clicked() {
@@ -303,7 +293,13 @@ void SelectionDetails::on_btnAddTag_clicked() {
 
 void SelectionDetails::on_btnTagSelected_clicked() {
     TagUpload* tagger = new TagUpload();
-    tagger->show();
+
+    tagger->setTagDeviceList(getSelectedList());
+    tagger->setRunNumber(run.toInt());
+    tagger->setUploadTag(cmbTagList->currentIndex()+1, cmbTagList->currentText());
+    tagger->setCloseTicketFlag(chkCloseTkt->isChecked());
+    tagger->setOpenTicketAndTagList(openTktMap, dbTags);
+    tagger->exec();
 }
 
 void SelectionDetails::on_btnShowSource_clicked() {
@@ -427,3 +423,23 @@ void SelectionDetails::on_btnShowTrend_clicked() {
     trends->getSelectionInfo(graphMap);
     emit showTabSignal(trends, "Trends");
 }
+
+void SelectionDetails::on_btnSave_clicked() {
+ 
+    char* curDir;
+    curDir = getenv("PWD");
+    QString saveFileName = (QFileDialog::getSaveFileName(this, tr("Save Image"), curDir, tr("Text files (*.txt)")));
+    if (Debug::Inst()->getEnabled()) qDebug() << saveFileName;
+    if (saveFileName == NULL) return;
+    else {
+        std::ofstream file_out(qPrintable(saveFileName), std::ios::out);
+        file_out << "Detid" << " and " << "I2CAddress" << std::endl; 
+        for (int i = 0; i < selModel->rowCount(); i++) {
+            if (!listSelection->isRowHidden(i, QModelIndex()) && selModel->item(i, 0)->checkState() == Qt::Checked) {
+                file_out << selModel->item(i, 3)->text().toStdString() << '\t' << selModel->item(i, 10)->text().toStdString() << std::endl;
+            }
+        }
+        file_out.close();
+    }
+}
+

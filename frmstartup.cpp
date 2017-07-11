@@ -11,6 +11,8 @@
 #include "frmstartup.h"
 #include "frmtreeviewer.h"
 #include "frmterminal.h"
+#include "frmmultipart.h"
+#include "frmprepareglobal.h"
 #include "TreeBuilder.h"
 #include "Debug.h"
 #include "DbConnection.h"
@@ -274,6 +276,14 @@ void Startup::on_btnMarkBad_clicked() {
 }
 
 void Startup::on_btnPrepareGlobal_clicked() {
+    PrepareGlobal* o2o = new PrepareGlobal();
+    o2o->show();
+    //emit showTabSignal(o2o, "O2O");
+}
+
+void Startup::on_btnTimingO2O_clicked() {
+    MultiPart* to2o = new MultiPart(&tmpfiles);
+    emit showTabSignal(to2o, "Multi Partitions");
 }
 
 void Startup::on_btnQuit_clicked() {

@@ -6,7 +6,7 @@
 #include "TreeBuilder.h"
 #include "frmtreeviewer.h"
 #include "frmreferencechooser.h"
-#include "frmruninfo.h"
+#include "frmdbupload.h"
 #include "frmdetails.h"
 #include "frmtkmap.h"
 #include "frmfedmap.h"
@@ -21,12 +21,14 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QProgressDialog>
+#include <QLineEdit>
 #include <QtSql/QSqlQuery>
 
 // ROOT includes
 #include <TROOT.h>
 #include <TFile.h>
 #include <TTree.h>
+#include <TTreeFormula.h>
 #include <TEventList.h>
 #include <TH1.h>
 #include <TKey.h>
@@ -85,7 +87,7 @@ void TreeViewer::updateCanvas() {
 
 bool TreeViewer::addRun(QString partitionName, QString runNumber, bool isCurrent) {
 
-    if (runNumber.toInt() == sistrip::CURRENTSTATE || runNumber.toInt() == sistrip::LASTO2O) {
+    if (runNumber.toInt() == sistrip::CURRENTSTATE || runNumber.toInt() == sistrip::LASTO2O || runNumber.toInt() == sistrip::MULTIPART) {
         btnGetSelected->setEnabled(false);
         btnRef->setEnabled(false);
         //btnTkMap->setEnabled(false);
@@ -122,9 +124,10 @@ bool TreeViewer::addRun(QString partitionName, QString runNumber, bool isCurrent
 
         fillBranchNames(true, 'x'); fillBranchNames(true, 'y'); fillBranchNames(true, 'z');
 
-        if      (runNumber.toInt() == sistrip::CURRENTSTATE) btnRunInfo->setText(partitionName+QString(": Curr. DB State"));
-        else if (runNumber.toInt() == sistrip::LASTO2O     ) btnRunInfo->setText(partitionName+QString(": Last O2O State"));
-        else btnRunInfo->setText(partitionName+QString(": ")+runNumber);
+        if      (runNumber.toInt() == sistrip::CURRENTSTATE) btnDBUpload->setText(partitionName+QString(": Curr. DB State"));
+        else if (runNumber.toInt() == sistrip::LASTO2O     ) btnDBUpload->setText(partitionName+QString(": Last O2O State"));
+        else if (runNumber.toInt() == sistrip::MULTIPART   ) btnDBUpload->setText(QString("Multi-parition"));
+        else btnDBUpload->setText(partitionName+QString(": ")+runNumber);
         lblInfo->setText(QString("Tree with ")+QString::number(treeInfo.getCurrentTree()->GetEntries())+QString(" devices loaded"));
 
         fillSummaryHists(runNumber);
@@ -183,7 +186,7 @@ void TreeViewer::fillBranchNames(bool isCurrent, char axis) {
 
 void TreeViewer::fillSummaryHists(const QString& runNumber) {
 
-    if (runNumber.toInt() == sistrip::CURRENTSTATE || runNumber.toInt() == sistrip::LASTO2O) return; 
+    if (runNumber.toInt() == sistrip::CURRENTSTATE || runNumber.toInt() == sistrip::LASTO2O || runNumber.toInt() == sistrip::MULTIPART) return; 
 
     if (summaryHists.size() > 0) summaryHists.clear(); 
     btnShowSummary->setEnabled(false);
@@ -287,6 +290,14 @@ void TreeViewer::draw(bool firstDraw, bool is1D) {
         qDebug() << "CutString : " << cutString;
         qDebug() << "DrawString: " << drawString;
     }
+
+    /*
+    TTreeFormula cutform("cutform", qPrintable(getInvalidCutString(invChecked)), tree);
+    if (cutform.GetNdim() == 0) {
+        QMessageBox::critical(0, tr("TreeViewer"), tr("The cut string is invalid") );      
+        return;
+    }
+    */
 
     getCanvas()->cd();
     tree->SetMarkerStyle(7);
@@ -413,8 +424,12 @@ QString TreeViewer::getInvalidCutString(bool showInvalid) {
         else cutstr += "1";
         if (!curY.isEmpty() && !curY.contains("fString") ) cutstr += " && " +QString("TMath::Abs(")+ curDrawY +QString(" - 65535) > 1e-6");
         if (!curZ.isEmpty() && !curZ.contains("fString") ) cutstr += " && " +QString("TMath::Abs(")+ curDrawZ +QString(" - 65535) > 1e-6");
+        if (lineCut->text() != "")                         cutstr += " && " +lineCut->text();
     }
-    else cutstr += "1";
+    else {
+        if (lineCut->text() != "") cutstr += lineCut->text();
+        else cutstr += "1";
+    }
     
     cutstr += ")";
 
@@ -591,13 +606,22 @@ void TreeViewer::on_btnPrintToFile_clicked() {
     else getCanvas()->Print(saveFileName.toStdString().c_str());
 }
 
-void TreeViewer::on_btnRunInfo_clicked() {
-    if (treeInfo.getCurrentRunNumber().toInt() != sistrip::CURRENTSTATE && treeInfo.getCurrentRunNumber().toInt() != sistrip::LASTO2O) {
-        RunInfo* runInfo = new RunInfo();
-        runInfo->setCurrentRun(treeInfo.getCurrentRunNumber());
-        runInfo->displayRunInfo();
-        emit showTabSignal(runInfo, "Run Info");
+void TreeViewer::on_btnDBUpload_clicked() {
+    DBUpload* dbup = new DBUpload();
+    dbup->setCurrentRun(treeInfo.getCurrentRunNumber());
+    dbup->setCurrentPartition(treeInfo.getCurrentPartition());
+    
+    TTree* tree = NULL; 
+    if (treeInfo.getCurrentTree()) tree = treeInfo.getCurrentTree();
+    if (!tree) {
+        if (Debug::Inst()->getEnabled()) qDebug() << "Unable to get hold of the tree";
+        return;
     }
+    dbup->setTree(tree);
+    dbup->setSelMap(selMap);
+    
+    bool ok = dbup->displayRunInfo();
+    if (ok) emit showTabSignal(dbup, "DB Upload");
 }
 
 void TreeViewer::on_btnGetSelected_clicked() {

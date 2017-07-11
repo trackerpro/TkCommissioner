@@ -74,6 +74,7 @@ namespace fedview {
                 std::cerr << "FED " << feds[slot-1].id << " already mapped in slot " << slot << "... " << (overwrite ? "overwriting" : "skipping") << std::endl;
                 if (!overwrite) return;
             }   
+
             feds[slot-1].id = fedid;
             feds[slot-1].isMarked = (feinfo.size() > 0);
             isEmpty = false;

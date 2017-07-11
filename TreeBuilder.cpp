@@ -92,15 +92,102 @@ bool TreeBuilder::buildTree(const QString& filename, const QString &analysisType
             return false;
         }
 
+        QVector<QString> analysisIds;
+        analysisIds.push_back(analysisId);
         std::stringstream myQuery;
         myQuery << getQuery( qPrintable(analysisType) );
         tree = new TTree("DBTree","DBTree");      
-        fillTree(tree, qPrintable(analysisType), myQuery.str(), analysisId.toInt() );
+        fillTree(tree, qPrintable(analysisType), myQuery.str(), analysisIds);
         tree->Write();
         file->Close();
         if(Debug::Inst()->getEnabled()) qDebug() << "File recreated";
         return true;
     }
+}
+
+bool TreeBuilder::buildMultiPartTree(const QString& filename, QVector<QRunId> runIds) {
+
+    if (!DbConnection::Inst()->dbConnected()) {
+        if(Debug::Inst()->getEnabled()) qDebug() << "DB connection not found ... unable to make the Timing O2O tree ";
+        return false;
+    }
+
+    if (runIds.size() != 4) {
+        if(Debug::Inst()->getEnabled()) qDebug() << "4 runIds needed for the four partitions ... unable to make the Timing O2O tree ";
+        return false;
+    }
+
+    bool result=false;
+    QVector<QString> analysisIds; 
+    QVector<QString> analysisTypes; 
+    for (int i = 0; i < runIds.size(); i++) {
+        QString myQuery("select max(analysisid), ANALYSISTYPE, RUNNUMBER, PARTITIONNAME");
+        myQuery += " from analysis a join partition b on a.PARTITIONID = b.PARTITIONID";
+        myQuery += " where PARTITIONNAME = ? ";
+        myQuery += " and RUNNUMBER= ?"; 
+        myQuery += " group by ANALYSISTYPE, RUNNUMBER, PARTITIONNAME";                 
+        
+        if(Debug::Inst()->getEnabled()) qDebug() << qPrintable(myQuery);
+        
+        QSqlQuery query;
+        query.prepare(myQuery);
+        query.addBindValue(runIds[i].first);
+        query.addBindValue(runIds[i].second);
+        query.exec();
+        int resultCounter = 0;
+
+        QString analysisId, analysisType;
+
+        while (query.next()) {
+            analysisId    = query.value(0).toString();
+            analysisType  = query.value(1).toString() ;
+            resultCounter++;
+        }
+        if( query.lastError().isValid() ) {
+            if(Debug::Inst()->getEnabled()) qDebug() << qPrintable(query.lastError().text());
+        }
+        if (resultCounter==1) result = true;
+        else if (resultCounter>1) {
+            if(Debug::Inst()->getEnabled()) qDebug() << "More than one analysis type on the same run";
+            result =  false;
+        }            
+        else {
+            if(Debug::Inst()->getEnabled()) qDebug()  << "No analysis found for the given run number and partition";
+            result = false;
+        } 
+        if (!result) return false;
+
+        analysisIds  .push_back(analysisId);
+        analysisTypes.push_back(analysisType);
+    }
+
+    if (analysisIds.size() != 4) {
+        if(Debug::Inst()->getEnabled()) qDebug() << "Unable to find analysis IDs for the four partitions ... unable to make the Timing O2O tree ";
+        return false;
+    }
+
+    if (analysisTypes.size() != 4) {
+        if(Debug::Inst()->getEnabled()) qDebug() << "Unable to parse run type for all the partitions";
+        return false;
+    }
+
+    if(Debug::Inst()->getEnabled()) qDebug() << "Creating the file for the Timing O2O tree for all four partitions"; 
+    
+    TFile* file = new TFile(qPrintable(filename),"RECREATE");
+    if (!file) {
+        if(Debug::Inst()->getEnabled()) qDebug() << "Unable to create the Timing O2O file: " << qPrintable(filename);
+        return false;
+    }
+   
+    std::stringstream myQuery;
+    myQuery << getQuery( qPrintable(analysisTypes[0]) );
+    TTree* tree = new TTree("DBTree","DBTree");      
+    fillTree(tree, qPrintable(analysisTypes[0]), myQuery.str(), analysisIds);
+    tree->Write();
+    file->Close();
+    if(Debug::Inst()->getEnabled()) qDebug() << "File recreated";
+    return true;
+
 }
 
 QString TreeBuilder::loadAnalysis(const QRunId& pair, bool useCache) {
@@ -129,6 +216,42 @@ QString TreeBuilder::loadAnalysis(const QRunId& pair, bool useCache) {
             }
             else {
                 if(Debug::Inst()->getEnabled()) qDebug() << "Tree build failed for LAST O2O STATE\n";
+            }
+        }
+        if (res) return QString(filename.str().c_str());
+        else return "";
+    }
+    else if (pair.second == QString::number(sistrip::MULTIPART)) {
+        std::stringstream filename;
+        QVector<QRunId> runIds;
+        QStringList parts = pair.first.split("*");
+        
+        if (parts.size() != 5) {
+            if(Debug::Inst()->getEnabled()) qDebug() << "Unable to deconstruct 4 partition names for the multi-partition view\n";
+            return "";
+        }
+
+        QString filenamestart = parts.at(0);
+
+        for (int i = 1; i < parts.size(); i++) {
+            QString part = parts.at(i);
+            QStringList subparts = part.split("#");
+            if (subparts.size() != 2) {
+                if(Debug::Inst()->getEnabled()) qDebug() << "Unable to deconstruct 4 partition names and run numbers for multi-partition view\n";
+                return "";
+            }
+            runIds.push_back(QRunId(subparts[0], subparts[1]));
+        }
+
+        filename << "/opt/cmssw/shifter/avartak/data/" << filenamestart.toStdString() << (QString("_FOURPARTS.root")).toStdString();
+
+        bool res = buildMultiPartTree(filename.str().c_str(), runIds);
+        if (Debug::Inst()->getEnabled()) {
+            if (res) {
+                if(Debug::Inst()->getEnabled()) qDebug() << "Tree build successful for multi-partition view\n";
+            }
+            else {
+                if(Debug::Inst()->getEnabled()) qDebug() << "Tree build failed for multi-partition view\n";
             }
         }
         if (res) return QString(filename.str().c_str());
@@ -188,20 +311,19 @@ QString TreeBuilder::loadAnalysis(const QString& partitionName, const QString& r
     return loadAnalysis(runId, useCache);
 }
 
-void TreeBuilder::fillTree(TTree* tree, std::string runType, const std::string& theQuery, int analysisId) {
+void TreeBuilder::fillTree(TTree* tree, std::string runType, const std::string& theQuery, QVector<QString> analysisIds) {
     if( !DbConnection::Inst()->dbConnected() ) {
         if(Debug::Inst()->getEnabled()) qDebug() << "Unable to find a valid DB connection";
         return;
     }
-    
-    QSqlQuery query;
-    query.prepare(theQuery.c_str());
-    query.addBindValue(analysisId);
-    query.exec();
-    
+   
+    if (analysisIds.size() == 0) {
+        if(Debug::Inst()->getEnabled()) qDebug() << "No analysis IDs found";
+        return;
+    }
+ 
     BaseQuery myQueryStruct2;
     myQueryStruct2.setExtendedQuery(runType);
-     
       
     QVector<std::pair<std::string, Base_Type*> >::const_iterator it = myQueryStruct2.query.begin(), itEnd = myQueryStruct2.query.end();    
       
@@ -229,15 +351,21 @@ void TreeBuilder::fillTree(TTree* tree, std::string runType, const std::string& 
         }
     }
 
-    while (query.next()) {
-        int i = 0;
-        for(it = myQueryStruct2.query.begin(); it != itEnd; ++it,++i) it->second->setFromResultset(query,i);
-        tree->Fill();
+    for (int k = 0; k < analysisIds.size(); k++) {
+        QSqlQuery query;
+        query.prepare(theQuery.c_str());
+        query.addBindValue(analysisIds[k].toInt());
+        query.exec();
+    
+        while (query.next()) {
+            int i = 0;
+            for(it = myQueryStruct2.query.begin(); it != itEnd; ++it,++i) it->second->setFromResultset(query,i);
+            tree->Fill();
+        }
+        if( query.lastError().isValid() ) {
+            if(Debug::Inst()->getEnabled()) qDebug() << qPrintable(query.lastError().text());
+        }
     }
-    if( query.lastError().isValid() ) {
-        if(Debug::Inst()->getEnabled()) qDebug() << qPrintable(query.lastError().text());
-    }
-
     
 }
 

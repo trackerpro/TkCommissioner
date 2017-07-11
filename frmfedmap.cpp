@@ -41,7 +41,7 @@ FedMap::FedMap(const QVector<int>& smap, QPair<QString, QString> runid, TTree* t
     run  = runid.second;
     mode = "";
 
-    if (part == "" || run == "" || run.toInt() == 137 || run.toInt() == 138) btnUpload->setEnabled(false);
+    if (part == "" || run == "" || run.toInt() == 137 || run.toInt() == 138 || run.toInt() == 139) btnUpload->setEnabled(false);
     else {
         btnUpload->setEnabled(true);
         btnUpload->setText(QString("Selective upload : ")+runid.second);
@@ -134,7 +134,7 @@ FedMap::FedMap(const QVector<int>& smap, QPair<QString, QString> runid, TTree* t
             rackname = rackname.remove("-d");
             rackname = rackname.remove("-h");
             rackname = rackname.remove("-l");
-        
+       
             QVector<QVector<bool> > feinfo;
             for (QMap<unsigned, QVector<QVector<bool> > >::const_iterator iter = markedFeds.begin(); iter != markedFeds.end(); ++iter) {
                 if (unsigned(query.value(1).toInt()) == iter.key()) feinfo = iter.value();

@@ -21,7 +21,8 @@ HEADERS +=  Debug.h \
             frmstartup.h \
             frmtreeviewer.h \
             frmreferencechooser.h \
-            frmruninfo.h \
+            frmdbupload.h \
+            frmaddskip.h \
             frmdetails.h \
             frmdbtag.h \
             frmsavetags.h \
@@ -30,6 +31,10 @@ HEADERS +=  Debug.h \
             frmtkmap.h \
             frmfedmap.h \
             frmterminal.h \
+            frmmultipart.h \
+            frmprepareglobal.h \
+            frmpartitions.h \
+            frmterminaldialog.h \
             cmssw/SiStripFecKey.h \
             cmssw/SiStripFedKey.h
 
@@ -45,11 +50,15 @@ SOURCES +=  main.cpp \
             TkView.cpp \
             frmstartup.cpp \
             frmtreeviewer.cpp \
-            frmruninfo.cpp \
+            frmdbupload.cpp \
+            frmaddskip.cpp \
             frmdetails.cpp \
             frmsource.cpp \
             frmtkmap.cpp \
             frmfedmap.cpp \
+            frmmultipart.cpp \
+            frmprepareglobal.cpp \
+            frmpartitions.cpp \
             cmssw/SiStripKey.cc \
             cmssw/SiStripFecKey.cc \
             cmssw/SiStripFedKey.cc \
@@ -58,7 +67,8 @@ FORMS +=    uifiles/frmcommissioner.ui \
             uifiles/frmstartup.ui \
             uifiles/frmtreeviewer.ui \
             uifiles/frmreferencechooser.ui \
-            uifiles/frmruninfo.ui \
+            uifiles/frmdbupload.ui \
+            uifiles/frmaddskip.ui \
             uifiles/frmfedmap.ui \
             uifiles/frmdetails.ui \
             uifiles/frmdbtag.ui \
@@ -66,3 +76,7 @@ FORMS +=    uifiles/frmcommissioner.ui \
             uifiles/frmsource.ui \
             uifiles/frmtrends.ui \
             uifiles/frmterminal.ui \
+            uifiles/frmprepareglobal.ui \
+            uifiles/frmpartitions.ui \
+            uifiles/frmterminaldialog.ui \
+            uifiles/frmmultipart.ui

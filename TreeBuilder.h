@@ -36,7 +36,8 @@ namespace sistrip {
         CALIBRATION_DECO      = 33,
         UNKNOWN_RUN_TYPE      = 99,
         CURRENTSTATE          = 137, // fake run mode added for current state retrieval 
-        LASTO2O               = 138, // fake run mode added for current state retrieval 
+        LASTO2O               = 138, // fake run mode added for lastO2O state retrieval 
+        MULTIPART             = 139, // fake run mode added for Timing O2O
         UNDEFINED_RUN_TYPE    = 65535
     };
 }
@@ -80,6 +81,11 @@ class TreeBuilder {
          */ 
         bool    buildTree(const QString& filename, const QString &analysisType, const QString &analysisId, const QString &partitionName, const QString &runNumber, bool useCache=false);
         /**
+         * Create a file with a tree for timing runs corresponding to all the four partitions
+         * These timing runs are to be used for the timing O2O
+         */ 
+        bool    buildMultiPartTree(const QString& filename, QVector<QRunId> runIds);
+        /**
          * load analysis for a given run number and partition.
          */
         QString loadAnalysis(const QRunId &runId, bool useCache=false);
@@ -111,7 +117,7 @@ class TreeBuilder {
          * Create and fill a tree for a given run number and run type. The
          * query used to retrieve the data is passed as argument.
          */
-        void fillTree(TTree* tree, std::string runType, const std::string& theQuery,int analysisId);
+        void fillTree(TTree* tree, std::string runType, const std::string& theQuery, QVector<QString> analysisIds);
         /**
          * get the query to retrieve information for a given run type and a
          * given analysis id
