@@ -6,6 +6,7 @@
 #include <QModelIndex>
 #include <QMessageBox>
 #include <QProcess>
+#include <QDir>
 
 // project includes
 #include "frmstartup.h"
@@ -240,7 +241,14 @@ void Startup::on_btnAnalyze_clicked() {
     
     commandArgs << runNumber << uploadString << uploadAnalString << currentPartitionName << useClientString << disableModulesString << saveClientString;
     TkTerminal* terminal = new TkTerminal();
-    terminal->startProcess("/opt/cmssw/scripts/run_analysis.sh", commandArgs);
+
+    QDir fffdir("/raid/fff");
+    QStringList runFilter;
+    runFilter << "*run"+runNumber+"*";
+    QStringList runs = fffdir.entryList(runFilter, QDir::Dirs);
+
+    if (runs.size() > 0) terminal->startProcess("/opt/cmssw/scripts/run_analysis_new.sh", commandArgs);
+    else                 terminal->startProcess("/opt/cmssw/scripts/run_analysis.sh", commandArgs);
     if (terminal->didStartFail()) delete terminal;
     else emit showTabSignal(terminal, "Run Analysis");
 }
