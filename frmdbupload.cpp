@@ -12,6 +12,7 @@
 #include <QTextCursor>
 #include <QTextTable>
 #include <QMessageBox>
+#include <QDir>
 
 DBUpload::DBUpload(QWidget* parent):
     QConnectedTabWidget(parent),
@@ -799,8 +800,14 @@ void DBUpload::on_btnUpload_clicked() {
         
         commandArgs << currentRun << uploadString << uploadAnalString << currentPartition << useClientString << disableModulesString << saveClientString;
        
+        QDir fffdir("/raid/fff");
+        QStringList runFilter;
+        runFilter << "*run"+currentRun+"*";
+        QStringList runs = fffdir.entryList(runFilter, QDir::Dirs);
+
         TkTerminal* terminal = new TkTerminal();
-        terminal->startProcess("/opt/cmssw/scripts/run_analysis_test.sh", commandArgs);
+        if (runs.size() > 0) terminal->startProcess("/opt/cmssw/scripts/run_analysis_selup_new.sh", commandArgs);
+        else                 terminal->startProcess("/opt/cmssw/scripts/run_analysis_selup.sh", commandArgs);
         if (terminal->didStartFail()) delete terminal;
         else emit showTabSignal(terminal, "Run Analysis");
 
