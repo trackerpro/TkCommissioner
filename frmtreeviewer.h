@@ -6,6 +6,7 @@
 #include <TTree.h>
 #include <TFile.h>
 #include <TEventList.h>
+#include "TFriendElement.h"
 
 // Qt includes
 #include <QVector>

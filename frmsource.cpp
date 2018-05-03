@@ -13,10 +13,11 @@
 #include "cmssw/SiStripFedKey.h"
 #include "cmssw/SiStripFecKey.h"
 
-SourceDisplay::SourceDisplay(QWidget* p, QString c, QString r, const QVector<QPair<QString, QString> >& d, const QVector<QPair<unsigned, unsigned> >& k): 
+SourceDisplay::SourceDisplay(QWidget* p, QString c, QString r, const QVector<QPair<QString, QString> >& d, const QVector<QPair<unsigned, unsigned> >& k, const QString & partition): 
     QConnectedTabWidget(p),
     currun(c),
     refrun(r),
+    partition(partition),
     refexists(false),
     iscurrent(true),
     updatehistitem(false),
@@ -51,8 +52,8 @@ SourceDisplay::SourceDisplay(QWidget* p, QString c, QString r, const QVector<QPa
     selModel->setHeaderData(0, Qt::Horizontal, QObject::tr("Detid"));
     selModel->setHeaderData(1, Qt::Horizontal, QObject::tr("I2CAddress"));
 
-    if (currun != "") curclient = getClientFile(currun);
-    if (refexists   ) refclient = getClientFile(refrun);
+    if (currun != "") curclient = getClientFile(currun,partition);
+    if (refexists   ) refclient = getClientFile(refrun,partition);
 
     if (!curclient || !curclient->IsOpen()) {
         if (Debug::Inst()->getEnabled()) qDebug() << "Unable to open client file of run " << currun;
@@ -67,23 +68,33 @@ SourceDisplay::SourceDisplay(QWidget* p, QString c, QString r, const QVector<QPa
 SourceDisplay::~SourceDisplay() {
 }
 
-TFile* SourceDisplay::getClientFile(QString run) {
-    TString filePath = Form("/opt/cmssw/Data/%d/SiStripCommissioningClient*.root", run.toInt());
-    TChain chain;
-    chain.Add(filePath);
-    TObjArray *fileElements=chain.GetListOfFiles();
-    if (fileElements->GetEntries() > 1)  {
-        if (Debug::Inst()->getEnabled()) qDebug() << "Multiple client files found for run " << run;
-        return NULL;
-    }        
-    if (fileElements->GetEntries() == 0) {
-        if (Debug::Inst()->getEnabled()) qDebug() << "No client file found for run " << run;
-        return NULL;
-    }        
+TFile* SourceDisplay::getClientFile(QString run, QString partition = "") {
+
+  TString filePath = Form("/opt/cmssw/Data/%d/SiStripCommissioningClient*.root", run.toInt());
+  TChain chain;
+  TChain chain_2;
+  chain.Add(filePath);
+  TObjArray *fileElements = chain.GetListOfFiles();
+  
+  if(fileElements->GetEntries() > 1){ // use the partition to solve ambiguity
+    filePath = Form("/opt/cmssw/Data/%d/SiStripCommissioningClient*%s*.root",run.toInt(),partition.toStdString().c_str());
+    chain_2.Add(filePath);
+    fileElements = chain_2.GetListOfFiles();    
+  }
     
-    TIter thefile(fileElements);
-    TChainElement* chEl= (TChainElement*)thefile();
-    return TFile::Open(chEl->GetTitle());
+  if(fileElements->GetEntries() > 1){
+    if (Debug::Inst()->getEnabled()) qDebug() << "Multiple client files found for run " << run;
+    return NULL;
+  }
+  
+  if (fileElements->GetEntries() == 0) {
+    if (Debug::Inst()->getEnabled()) qDebug() << "No client file found for run " << run;
+    return NULL;
+  }        
+  
+  TIter thefile(fileElements);
+  TChainElement* chEl= (TChainElement*)thefile();
+  return TFile::Open(chEl->GetTitle());
 }
 
 void SourceDisplay::deviceChanged(QModelIndex current, QModelIndex) {

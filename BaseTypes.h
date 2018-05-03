@@ -9,6 +9,8 @@
 #include <QtSql/QSqlQuery>
 #include <QVariant>
 #include <QVector>
+#include <QRegExp>
+#include <QStringList>
 
 // ROOT includes
 #include <TObjString.h>
@@ -110,6 +112,43 @@ struct Integer : public Base_Type {
     }
     
     unsigned int value;
+};
+
+struct IntFromStringMap : public Base_Type {
+    IntFromStringMap() {
+        svalue = "";
+        value = 0;
+    }
+
+    IntFromStringMap(QString v):
+        Base_Type(),
+        svalue(v)
+    {
+        value = getIntFromStringMap(svalue);
+    }
+
+    virtual void setFromResultset(const QSqlQuery& rs, int field_no) {
+        svalue = rs.value(field_no).toString();
+        value  = getIntFromStringMap(svalue);
+    }
+
+    int getIntFromStringMap(QString s) {
+        QRegExp rx("(\\|)");
+        QStringList query = s.split(rx);
+        bool has_only_digits = false;
+        int val = 0;
+        foreach(QString str, query) {
+            std::string is = str.toStdString();
+            has_only_digits = (is.find_first_not_of( "0123456789" ) == std::string::npos);
+            if(has_only_digits){
+                val += str.toInt();
+            }
+        }
+        return val;
+    }
+
+    QString svalue;
+    int value;
 };
 
 
@@ -248,7 +287,7 @@ struct BaseQuery {
             query.push_back(std::make_pair("Isvalid"   ,    new Double() ) );
             query.push_back(std::make_pair("Isdirty"   ,    new Double() ) );
         } 
-        else if(runType == "PEDESTALS" || runType == "PEDESTAL" || runType == "SCOPE") {
+        else if(runType == "PEDESTALS" || runType == "PEDESTAL") {
             query.push_back(std::make_pair("DeviceId",      new Double() ) );
             query.push_back(std::make_pair("FedId",         new Double() ) );
             query.push_back(std::make_pair("FeUnit",        new Double() ) );
@@ -267,6 +306,35 @@ struct BaseQuery {
             query.push_back(std::make_pair("RawMax",        new Double() ) );
             query.push_back(std::make_pair("RawMin",        new Double() ) );
             query.push_back(std::make_pair("IsValid",       new Double() ) );
+            query.push_back(std::make_pair("Dead"   ,       new IntFromStringMap() ) );
+            query.push_back(std::make_pair("Noisy",         new IntFromStringMap() ) );
+        } 
+        else if(runType == "SCOPE") {
+            query.push_back(std::make_pair("DeviceId"   , new Double() ) );
+            query.push_back(std::make_pair("FedId"      , new Double() ) );
+            query.push_back(std::make_pair("FeUnit"     , new Double() ) );
+            query.push_back(std::make_pair("FeChan"     , new Double() ) );
+            query.push_back(std::make_pair("FeApv"      , new Double() ) );
+            query.push_back(std::make_pair("TickHeight" , new Double() ) );
+            query.push_back(std::make_pair("Delay"      , new Double() ) );
+            query.push_back(std::make_pair("Base"       , new Double() ) );  
+            query.push_back(std::make_pair("Peak"       , new Double() ) );  
+            query.push_back(std::make_pair("Kind"       , new Double() ) );  
+            query.push_back(std::make_pair("IsValid"    , new Double() ) );
+            query.push_back(std::make_pair("PedsMean",      new Double() ) );
+            query.push_back(std::make_pair("PedsSpread",    new Double() ) );
+            query.push_back(std::make_pair("NoiseMean",     new Double() ) );
+            query.push_back(std::make_pair("NoiseSpread",   new Double() ) );
+            query.push_back(std::make_pair("RawMean",       new Double() ) );
+            query.push_back(std::make_pair("RawSpread",     new Double() ) );
+            query.push_back(std::make_pair("PedsMax",       new Double() ) );
+            query.push_back(std::make_pair("PedsMin",       new Double() ) );
+            query.push_back(std::make_pair("NoiseMax",      new Double() ) );
+            query.push_back(std::make_pair("NoiseMin",      new Double() ) );
+            query.push_back(std::make_pair("RawMax",        new Double() ) );
+            query.push_back(std::make_pair("RawMin",        new Double() ) );
+            query.push_back(std::make_pair("Dead"   ,       new IntFromStringMap() ) );
+            query.push_back(std::make_pair("Noisy",         new IntFromStringMap() ) );
         } 
         else if(runType == "ENC_PEDESTAL") {
             query.pop_back(); // remove IsValid from the end
@@ -285,6 +353,5 @@ struct BaseQuery {
             query.push_back(std::make_pair("IsValid",          new Double() ) );
         } 
     }
-
 };
 #endif

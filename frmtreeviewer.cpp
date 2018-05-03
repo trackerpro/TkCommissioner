@@ -105,13 +105,23 @@ bool TreeViewer::addRun(QString partitionName, QString runNumber, bool isCurrent
         if (Debug::Inst()->getEnabled()) qDebug() << "Unable to load analysis " << runId.first << ":" << runId.second << " ... analysis may already be loaded or can't be accessed";
         return false;
     }
+
     QPair<QString, QString> treePath;
     treePath.first = analysisTreeFilename;
     treePath.second = "DBTree";
-
     treeInfo.buildTreeInfo(runId, treePath, isCurrent);
     TObjArray* branchList = ( isCurrent ? treeInfo.getCurrentTree()->GetListOfBranches() : treeInfo.getReferenceTree()->GetListOfBranches() );
-
+    for(int itree = 0; itree < (isCurrent ? treeInfo.getCurrentFriendTrees().size() : treeInfo.getReferenceFriendTrees().size()); itree++){
+      TObjArray* friend_branchList = (isCurrent ? treeInfo.getCurrentFriendTrees().at(itree)->GetListOfBranches() : treeInfo.getReferenceFriendTrees().at(itree)->GetListOfBranches());
+      for(int ibranch = 0; ibranch < friend_branchList->GetSize(); ibranch++){	  
+	if(branchList->FindObject(friend_branchList->At(ibranch)->GetName()))
+	  continue;
+	else{
+	  branchList->Add(friend_branchList->At(ibranch));
+	}	    
+      }
+    }
+    
     if (isCurrent) {
         if (selMap.size() != 0) selMap.clear();
         for (int i = 0; i < treeInfo.getCurrentTree()->GetEntries(); i++) selMap.push_back(0);
@@ -273,6 +283,7 @@ void TreeViewer::draw(bool firstDraw, bool is1D) {
 
     lblInfo->setText(QString("Drawing: ")+curDrawX+QString(" ")+curDrawY+QString(" ")+curDrawZ);
     TTree* tree = NULL; 
+    treeInfo.getTmpFile()->cd();
     if (treeInfo.getCurrentTree()) tree = treeInfo.getCurrentTree();
     if (!tree) {
         if (Debug::Inst()->getEnabled()) qDebug() << "Unable to get hold of the tree";

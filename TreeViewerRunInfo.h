@@ -3,6 +3,7 @@
 
 #include <QString>
 #include <QPair>
+#include <QVector>
 
 #include <TFile.h>
 #include <TH1F.h>
@@ -30,6 +31,8 @@ class TreeViewerRunInfo {
         TTree* referenceTree;
         TEventList* eventList;
         std::vector<TH1*> summaryHists;
+	QVector<TTree*> currentFriendTrees;
+	QVector<TTree*> referenceFriendTrees;
 
     public:
         TreeViewerRunInfo(const QString&);
@@ -46,11 +49,16 @@ class TreeViewerRunInfo {
         QString getTmpFileName() const;
         TTree* getCurrentTree();
         TTree* getReferenceTree();
+	QVector<TTree*> getCurrentFriendTrees();
+	QVector<TTree*> getReferenceFriendTrees();
         TEventList* getEventList();
         void useEventList(bool);
         void closeTree(bool);
         void buildTreeInfo(QPair<QString, QString>, QPair<QString, QString>, bool);
         bool isRefTreeTypeSame();
+	TFile* getCurrentFile(){return currentFile;}
+	TFile* getReferenceFile(){return referenceFile;}
+	TFile* getTmpFile(){ return tmpFile;}
 };
 
 #endif

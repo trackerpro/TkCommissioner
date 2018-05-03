@@ -6,6 +6,7 @@
 #include <iostream>
 #include <sstream>
 #include "BaseTypes.h"
+#include "TBranchElement.h"
 
 // copying enum from CMSSW in order to not have any specific
 // dependency. 
@@ -73,18 +74,23 @@ class TreeBuilder {
          * try to add a file to the map of files associated with a given run
          * ID. Reports the success/non success of this operation
          */ 
-        bool    buildTree(const QString& filename, const QString &analysisType, const QString &analysisId, const QRunId& runId, bool useCache=false);
+        bool buildTree(const QString& filename, const QString &analysisType, const QString &analysisId, const QRunId& runId, bool useCache=false);
         /**
          * try to add a file to the map of files associated with a given run
          * ID. Reports the success/non success of this operation. Calls 
          * buildTree(const QString &analysisType, const QString &analysisId, const QRunId& runId)
          */ 
-        bool    buildTree(const QString& filename, const QString &analysisType, const QString &analysisId, const QString &partitionName, const QString &runNumber, bool useCache=false);
+        bool buildTree(const QString& filename, const QString &analysisType, const QString &analysisId, const QString &partitionName, const QString &runNumber, bool useCache=false);
         /**
          * Create a file with a tree for timing runs corresponding to all the four partitions
          * These timing runs are to be used for the timing O2O
          */ 
-        bool    buildMultiPartTree(const QString& filename, QVector<QRunId> runIds);
+        bool buildMultiPartTree(const QString& filename, QVector<QRunId> runIds);
+	/**
+	 * Create a file with information for one partition but multiple analysis tables (Spy-run analysis and bad-strip are examples
+	 */
+	bool buildMultiAnalysisTree(const QString& filename, const QVector<QString> &analysisType, const QVector<QString> &analysisId, const QString &partitionName, const QString &runNumber, bool useCache=false);
+	bool buildMultiAnalysisTree(const QString& filename, const QVector<QString> &analysisType, const QVector<QString> &analysisId, const QRunId& runId, bool useCache=false);
         /**
          * load analysis for a given run number and partition.
          */

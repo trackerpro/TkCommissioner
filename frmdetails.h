@@ -48,6 +48,7 @@ class SelectionDetails : public QConnectedTabWidget, private Ui::SelectionDetail
         QString var;
         QString run;
         QString refrun;
+	QString partition;
 
         std::multimap<int, std::pair<int,QStandardItem*> > openTktMap;
 };

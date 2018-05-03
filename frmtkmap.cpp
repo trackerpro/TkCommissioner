@@ -297,6 +297,7 @@ void TkMap::populateScene()
     */
     if      (varName_ == "Pedestal") tree_->SetBranchAddress("PedsMean", &dvar);
     else if (varName_ == "Noise") tree_->SetBranchAddress("NoiseMean", &dvar);
+    else if (varName_ == "NoisyStrips") tree_->SetBranchAddress("Noisy", &dvar);
     else if (typeName == "UInt_t" || typeName == "unsigned" || typeName == "unsigned int") tree_->SetBranchAddress(varName_.toStdString().c_str(), &uvar);
     else if (typeName == "Int_t" || typeName == "int") tree_->SetBranchAddress(varName_.toStdString().c_str(), &ivar);
     else if (typeName == "Float_t" || typeName == "float") tree_->SetBranchAddress(varName_.toStdString().c_str(), &fvar);
@@ -335,7 +336,7 @@ void TkMap::populateScene()
 
         it = modules.find(static_cast<unsigned long>(detid));
         if( it != modules.end() ) {
-            if      (varName_ == "Pedestal" || varName_ == "Noise") var = dvar;
+            if      (varName_ == "Pedestal" || varName_ == "Noise" || varName_ == "NoisyStrips") var = dvar;
             else if (typeName == "UInt_t" || typeName == "unsigned" || typeName == "unsigned int") var = double(uvar);
             else if (typeName == "Int_t" || typeName == "int") var = double(ivar);
             else if (typeName == "Float_t" || typeName == "float") var = double(fvar);

@@ -112,7 +112,7 @@ class Trends : public QConnectedTabWidget, private Ui::Trends {
                 if (grmax > ymax) ymax = grmax;
                 if (grmin < ymin) ymin = grmin;
             }
-            
+
             bool drawn = false;
             for (int i = 0; i < graphs.size(); i++) {
                 if (selModel->item(i, 0)->checkState() == Qt::Checked) {

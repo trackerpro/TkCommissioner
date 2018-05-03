@@ -1,14 +1,20 @@
 #include "TreeViewerRunInfo.h"
 #include <TFile.h>
 #include <TTree.h>
+#include <TROOT.h>
+#include <TKey.h>
 #include <iostream>
+#include <TFriendElement.h>
 
 TreeViewerRunInfo::~TreeViewerRunInfo() {
-    if (tmpFile) {
-        if (tmpFile->IsOpen()) tmpFile->Close();
-        delete tmpFile;
+
+  if (eventList) delete eventList;  
+  if (tmpFile) {
+    if (tmpFile->IsOpen()){
+      tmpFile->Close();
+      delete tmpFile;
     }
-    if (eventList) delete eventList;
+  }
 }
 
 TreeViewerRunInfo::TreeViewerRunInfo(const QString& tmpFileName_):
@@ -21,9 +27,9 @@ TreeViewerRunInfo::TreeViewerRunInfo(const QString& tmpFileName_):
     referenceFile(NULL),
     currentTree(NULL),
     referenceTree(NULL)
-{
-    if (tmpFileName_ != "") tmpFile = new TFile(qPrintable(tmpFileName), "RECREATE"); 
-    eventList = new TEventList("eventList", "eventList");
+{  
+  if (tmpFileName_ != "") tmpFile = new TFile(qPrintable(tmpFileName), "RECREATE"); 
+  eventList = new TEventList("eventList", "eventList");
 }
 
 QString TreeViewerRunInfo::getCurrentRunNumber() const {
@@ -70,77 +76,154 @@ TTree* TreeViewerRunInfo::getReferenceTree() {
     return referenceTree;
 }
 
+QVector<TTree*> TreeViewerRunInfo::getCurrentFriendTrees(){
+  return currentFriendTrees;
+} 
+QVector<TTree*> TreeViewerRunInfo::getReferenceFriendTrees(){
+  return referenceFriendTrees;
+}
+
+
 TEventList* TreeViewerRunInfo::getEventList() {
     return eventList;
 }
 
+
 void TreeViewerRunInfo::closeTree(bool save) {
-    if (currentFile == NULL || tmpFile == NULL) return;
-    if (save) {
-        tmpFile->cd();
-        if (referenceTree) referenceTree->Write();
-        if (currentTree) currentTree->Write();
-        tmpFile->Close();
+  
+  if (currentFile == NULL || tmpFile == NULL) return;
+
+  if (save) {
+    tmpFile->cd();
+    if (referenceTree) referenceTree->Write();
+    if (currentTree) currentTree->Write();
+    for(int itree = 0; itree < currentFriendTrees.size(); itree++){
+      if(currentFriendTrees.at(itree)) currentFriendTrees.at(itree)->Write();
     }
-    else {
-        tmpFile->cd();
-        if (referenceTree) {
-            referenceTree->Delete();
-            currentTree->RemoveFriend(referenceTree);
-        }
-        if (currentTree) currentTree->Delete();
-        tmpFile->Close();
+    for(int itree = 0; itree < referenceFriendTrees.size(); itree++){
+      if(referenceFriendTrees.at(itree)) referenceFriendTrees.at(itree)->Write();
     }
+  }
+  else {
+
+    tmpFile->cd();
+    if (referenceTree) {
+      currentTree->RemoveFriend(referenceTree);
+      for(int itree = 0; itree < referenceFriendTrees.size(); itree++){
+	if(referenceFriendTrees.at(itree)){
+	  referenceTree->RemoveFriend(referenceFriendTrees.at(itree));
+	  if(currentFriendTrees.size() > itree)
+	    referenceFriendTrees.at(itree)->RemoveFriend(currentFriendTrees.at(itree));
+	}
+      }
+    }
+    
+    if (currentTree) {
+      for(int itree = 0; itree < currentFriendTrees.size(); itree++){
+      	if(currentFriendTrees.at(itree)) {
+      	  currentTree->RemoveFriend(currentFriendTrees.at(itree));
+      	}
+      }
+    }
+  }  
 }
 
 void TreeViewerRunInfo::buildTreeInfo(QPair<QString, QString> runid_, QPair<QString, QString> treePath_, bool isCurrent) {
-    if (!tmpFile || !tmpFile->IsOpen()) return;
 
-    if (isCurrent) {
-        currentRun = runid_.second;
-        currentPartition = runid_.first;
-        currentFileName = treePath_.first;
-        currentTreePath = treePath_.second;
-        
-        currentFile = new TFile(qPrintable(currentFileName));
-        TTree* inputCurrentTree   = (TTree*)currentFile->Get(qPrintable(currentTreePath));
-        
-        if (inputCurrentTree) {
-            tmpFile->cd();
-            if (currentTree) {
-                if (referenceTree) currentTree->RemoveFriend(referenceTree);
-                currentTree->Delete();
-            }
-            currentTree = inputCurrentTree->CloneTree();
-            currentTree->SetName("currentTree");
-            inputCurrentTree->Delete();
-            currentFile->Close();
-            if (referenceTree) currentTree->AddFriend(referenceTree, "ref");
-        }
-    }
+  if (!tmpFile || !tmpFile->IsOpen()) return;
 
-    else {
-        referenceRun = runid_.second;
-        referencePartition = runid_.first;
-        referenceFileName = treePath_.first;
-        referenceTreePath = treePath_.second;
-        
-        referenceFile = new TFile(qPrintable(referenceFileName));
-        TTree* inputReferenceTree = (TTree*)referenceFile->Get(qPrintable(referenceTreePath));
-        
-        if (inputReferenceTree) {
-            tmpFile->cd();
-            if (referenceTree) {
-                if (currentTree) currentTree->RemoveFriend(referenceTree);
-                referenceTree->Delete();
-            }
-            referenceTree = inputReferenceTree->CloneTree();
-            referenceTree->SetName("referenceTree");
-            inputReferenceTree->Delete();
-            referenceFile->Close();
-            if (currentTree) currentTree->AddFriend(referenceTree, "ref");
-        }
+  if (isCurrent) {
+    currentRun = runid_.second;
+    currentPartition = runid_.first;
+    currentFileName = treePath_.first;
+    currentTreePath = treePath_.second;
+
+    currentFile = new TFile(qPrintable(currentFileName));
+    TTree* inputCurrentTree   = (TTree*)currentFile->Get(qPrintable(currentTreePath));    
+
+    if (inputCurrentTree) { // tree found
+      if (currentTree) {
+	if (referenceTree) currentTree->RemoveFriend(referenceTree);
+	for(int itree = 0; itree < currentFriendTrees.size(); itree++){
+	  if(currentFriendTrees.at(itree)) delete currentFriendTrees.at(itree);
+	}
+	delete currentTree;
+	currentFriendTrees.clear();
+      }
+      
+      tmpFile->cd();      
+      currentTree = inputCurrentTree->CloneTree();      
+      currentTree->SetName("currentTree");
+      
+      // Add friends      
+      TIter next(currentFile->GetListOfKeys());    
+      TKey* key;    
+      while ((key = (TKey*)next())){
+	TClass *cl = gROOT->GetClass(key->GetClassName());
+	if (!cl->InheritsFrom("TTree")) continue;
+	TTree *tree = (TTree*)key->ReadObj();
+	if(not tree or not TString(tree->GetName()).Contains("friend")) continue;
+	currentFriendTrees.push_back(tree->CloneTree());
+	currentTree->AddFriend(currentFriendTrees.back());
+	delete tree;
+      }
+
+      // Get list of friends
+      delete inputCurrentTree;
+      currentFile->Close();      
+      if (referenceTree) currentTree->AddFriend(referenceTree, "ref");
+      for(int itree = 0; itree < referenceFriendTrees.size(); itree++){
+	if(currentFriendTrees.size() > itree and currentFriendTrees.at(itree) and referenceFriendTrees.at(itree))
+      	  currentFriendTrees.at(itree)->AddFriend(referenceFriendTrees.at(itree),"ref");
+      }
     }
+  }
+  else {
+
+    referenceRun = runid_.second;
+    referencePartition = runid_.first;
+    referenceFileName = treePath_.first;
+    referenceTreePath = treePath_.second;
+    
+    referenceFile = new TFile(qPrintable(referenceFileName));
+    TTree* inputReferenceTree = (TTree*)referenceFile->Get(qPrintable(referenceTreePath));
+    
+    if (inputReferenceTree) {
+      if (referenceTree) {
+	if (currentTree) currentTree->RemoveFriend(referenceTree);
+	for(int itree = 0; itree < referenceFriendTrees.size(); itree++){
+	  if(currentFriendTrees.size() > itree)
+	    referenceFriendTrees.at(itree)->RemoveFriend(currentFriendTrees.at(itree));
+	  if(referenceFriendTrees.at(itree)) delete referenceFriendTrees.at(itree);
+	}
+	referenceFriendTrees.clear();
+	delete referenceTree;
+      }
+
+      tmpFile->cd();
+      referenceTree = inputReferenceTree->CloneTree();
+      referenceTree->SetName("referenceTree");
+
+      TIter next(referenceFile->GetListOfKeys());    
+      TKey* key;    
+      while ((key = (TKey*)next())){
+	TClass *cl = gROOT->GetClass(key->GetClassName());
+	if (!cl->InheritsFrom("TTree")) continue;
+	TTree *tree = (TTree*)key->ReadObj();
+	if(not tree or not TString(tree->GetName()).Contains("friend")) continue;
+	referenceFriendTrees.push_back(tree->CloneTree());
+	referenceTree->AddFriend(referenceFriendTrees.back());	
+	delete tree;
+      }      
+      delete inputReferenceTree;
+      referenceFile->Close();
+      if (currentTree) currentTree->AddFriend(referenceTree, "ref");
+      for(int itree = 0; itree < referenceFriendTrees.size(); itree++){
+      	if(currentFriendTrees.size() > itree and referenceFriendTrees.at(itree) and currentFriendTrees.at(itree))
+      	  currentFriendTrees.at(itree)->AddFriend(referenceFriendTrees.at(itree),"ref");
+      }
+    }
+  }
 }
 
 void TreeViewerRunInfo::useEventList(bool flag) {

@@ -15,7 +15,7 @@ class SourceDisplay : public QConnectedTabWidget, private Ui::SourceDisplay {
     Q_OBJECT
  
     public:
-        SourceDisplay(QWidget *parent, QString, QString, const QVector<QPair<QString, QString> >&, const QVector<QPair<unsigned, unsigned> >&);
+         SourceDisplay(QWidget *parent, QString, QString, const QVector<QPair<QString, QString> >&, const QVector<QPair<unsigned, unsigned> >&, const QString & = "");
         ~SourceDisplay();
 
     public Q_SLOTS:
@@ -28,6 +28,7 @@ class SourceDisplay : public QConnectedTabWidget, private Ui::SourceDisplay {
         QStandardItemModel* selModel;
         QString currun;
         QString refrun;
+	QString partition;
         QVector<QPair<QString, QString> > devices;
         QVector<QPair<unsigned, unsigned> > keys;
         TFile* curclient;
@@ -37,6 +38,6 @@ class SourceDisplay : public QConnectedTabWidget, private Ui::SourceDisplay {
         bool updatehistitem;
         QString histitem;
 
-        TFile* getClientFile(QString);
+        TFile* getClientFile(QString,QString);
 };
 #endif

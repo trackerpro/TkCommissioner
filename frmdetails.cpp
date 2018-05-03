@@ -38,6 +38,7 @@ SelectionDetails::SelectionDetails(QWidget* p, const TreeViewerRunInfo& tinfo):
 
     run    = tinfo.getCurrentRunNumber();
     refrun = tinfo.getReferenceRunNumber();
+    partition = tinfo.getCurrentPartition();
 }
 
 SelectionDetails::~SelectionDetails() {
@@ -327,7 +328,7 @@ void SelectionDetails::on_btnShowSource_clicked() {
         }
     }
 
-    SourceDisplay* source = new SourceDisplay(NULL, run, refrun, devices, keys);
+    SourceDisplay* source = new SourceDisplay(NULL, run, refrun, devices, keys, partition);
     emit showTabSignal(source, "Source");
 }
 
@@ -337,6 +338,7 @@ void SelectionDetails::on_btnShowTrend_clicked() {
     QSqlQuery runinfoquery(QString("select runnumber, modedescription from viewallrun left outer join analysis using(runnumber) where runnumber=")+run);
     QString runtype;
     QString runtypetable;
+    QString runtypetable_alt;
     QString plotvar;
     while(runinfoquery.next()) runtype = runinfoquery.value(1).toString();
     if      (runtype == "TIMING")                                              runtypetable = "ANALYSISTIMING";
@@ -344,6 +346,7 @@ void SelectionDetails::on_btnShowTrend_clicked() {
     else if (runtype == "VPSPSCAN")                                            runtypetable = "ANALYSISVPSPSCAN";
     else if (runtype == "VERY_FAST_CONNECTION" || runtype == "FASTFEDCABLING") runtypetable = "ANALYSISFASTFEDCABLING";
     else if (runtype == "PEDESTALS" || runtype == "PEDESTAL")                  runtypetable = "ANALYSISPEDESTALS";
+    else if (runtype == "SCOPE"){                                              runtypetable = "ANALYSISPEDESTALS"; runtypetable_alt = "ANALYSISTIMING"; }
     else return;
     plotvar = runtypetable + "." + var;
 
@@ -377,10 +380,56 @@ void SelectionDetails::on_btnShowTrend_clicked() {
                   << "i2caddress= (select i2caddress from input ) order by runnumber";
             
             
-            } else {
-              
-              if (plotvar == "ANALYSISTIMING.TickHeight")  {
+            } 
+	    else if (runtype == "SCOPE"){ // two tables can be associated with scop-mode runs from the spy
+	      
+	      if(var.contains("PEDS") or var.contains("peds") or
+		 var.contains("NOISE") or var.contains("noise") or
+		 var.contains("RAW") or var.contains("raw"))
+
+		queryss << "with input as ( select ? fecslot, ? ringslot, ? ccuaddress, ? i2cchannel, ? i2caddress from dual) "
+			<< "select viewdevice.fecslot, viewdevice.ringslot, viewdevice.ccuaddress,viewdevice.i2cchannel, "
+			<< qPrintable(plotvar)      << ", viewallrun.runnumber, starttime "
+			<< "from "                  << qPrintable(runtypetable)                 << " join analysis on " 
+			<< qPrintable(runtypetable) << ".analysisid=analysis.analysisid "
+			<< "join viewdevice on "    << qPrintable(runtypetable)                 << ".deviceid=viewdevice.deviceid join apvfec on apvfec.deviceid=viewdevice.deviceid join viewallrun "
+			<< " on analysis.runnumber=viewallrun.runnumber and " 
+			<< " apvfec.versionmajorid=viewallrun.FECVERSIONMAJORID and " 
+			<< "apvfec.versionminorid=viewallrun.FECVERSIONMINORID " 
+			<< " where apvmode = ( " 
+			<< " select distinct apvmode from apvfec join viewdevice using(deviceid) " 
+			<< "join viewallrun on " 
+			<< " apvfec.versionmajorid=viewallrun.FECVERSIONMAJORID and " 
+			<< "apvfec.versionminorid=viewallrun.FECVERSIONMINORID and fecslot = ( select fecslot from input) and ringslot = ( select ringslot from input) and ccuaddress = ( select ccuaddress from input) and i2cchannel = ( select i2cchannel from input) and i2caddress = ( select i2caddress from input) and viewallrun.runnumber = " << run.toInt() << ")"
+			<< "and fecslot= ( select fecslot from input) and "
+			<< "ringslot =  (select ringslot from input ) and " 
+			<< "ccuaddress= (select ccuaddress from input ) and "
+			<< "i2cchannel= (select i2cchannel from input ) and "
+			<< "i2caddress= (select i2caddress from input ) order by runnumber";
+	      else{
+
+		if (plotvar == "ANALYSISTIMING.TickHeight")  {
                   plotvar = "( case when ANALYSISTIMING.HEIGHT = -131070 then 65535 else ANALYSISTIMING.HEIGHT end)";
+		}  
+
+		queryss << "select viewdevice.fecslot, viewdevice.ringslot, viewdevice.ccuaddress,viewdevice.i2cchannel, "
+			<< qPrintable(plotvar)      << ", runnumber, starttime "
+			<< "from "                  << qPrintable(runtypetable_alt)                 << " join analysis on "
+			<< qPrintable(runtypetable_alt) << ".analysisid=analysis.analysisid "
+			<< "join viewdevice on "    << qPrintable(runtypetable_alt)                 << ".deviceid=viewdevice.deviceid join run using(runnumber) "
+			<< "where fecslot="         << "? and "
+			<< "ringslot="              << "? and "
+			<< "ccuaddress="            << "? and "
+			<< "i2cchannel="            << "? and "
+			<< "i2caddress="            << "? order by runnumber";
+		
+	      }		
+	    }
+
+	    else {
+
+              if (plotvar == "ANALYSISTIMING.TickHeight")  {
+		plotvar = "( case when ANALYSISTIMING.HEIGHT = -131070 then 65535 else ANALYSISTIMING.HEIGHT end)";
               }  
               
               queryss << "select viewdevice.fecslot, viewdevice.ringslot, viewdevice.ccuaddress,viewdevice.i2cchannel, "
@@ -395,7 +444,7 @@ void SelectionDetails::on_btnShowTrend_clicked() {
                   << "i2caddress="            << "? order by runnumber";
               
             }
-
+    
             QVector<QPair<double, double> > graphEntries;
             QSqlQuery query;
             query.prepare(myQuery);
