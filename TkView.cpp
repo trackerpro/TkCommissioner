@@ -167,10 +167,12 @@ View::View(const QString &, QWidget *parent, double minv, double maxv)
         minv = 2.0;
         maxv = 6.0;
     }        
-    sbMin->setValue(minv);
-    sbMax->setValue(maxv);
-    sbMin->setSingleStep ((maxv-minv)/25.);
-    sbMax->setSingleStep ((maxv-minv)/25.);
+    sbMin->setValue(minv-1);
+    sbMax->setValue(maxv+1);
+    sbMin->setRange(-1.,10000.);
+    sbMax->setRange(-1.,10000.);
+    sbMin->setSingleStep (10.);
+    sbMax->setSingleStep (10.);
 
     QButtonGroup *pointerModeGroup = new QButtonGroup;
     pointerModeGroup->setExclusive(true);

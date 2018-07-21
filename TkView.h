@@ -52,6 +52,8 @@
 
 #include "TkMapGlobals.h"
 
+#include <iostream>
+
 QT_FORWARD_DECLARE_CLASS(QLabel)
 QT_FORWARD_DECLARE_CLASS(QToolButton)
 

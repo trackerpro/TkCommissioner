@@ -88,14 +88,14 @@ void TreeViewer::updateCanvas() {
 bool TreeViewer::addRun(QString partitionName, QString runNumber, bool isCurrent) {
 
     if (runNumber.toInt() == sistrip::CURRENTSTATE || runNumber.toInt() == sistrip::LASTO2O || runNumber.toInt() == sistrip::MULTIPART) {
-        btnGetSelected->setEnabled(false);
-        btnRef->setEnabled(false);
-        //btnTkMap->setEnabled(false);
+        btnGetSelected->setEnabled(true);
+        btnRef->setEnabled(true);
+        btnTkMap->setEnabled(true);
     }
     else {
         btnGetSelected->setEnabled(true);
         btnRef->setEnabled(true);
-        //btnTkMap->setEnabled(true);
+        btnTkMap->setEnabled(true);
     }
 
     QRunId runId(partitionName,runNumber);
@@ -152,7 +152,7 @@ bool TreeViewer::addRun(QString partitionName, QString runNumber, bool isCurrent
 
         btnRef->setText("Ref: " + runId.second);
         
-        chkDiffX->setEnabled(sameRefRunType); chkDiffY->setEnabled(sameRefRunType); chkDiffZ->setEnabled(sameRefRunType);
+        chkDiffX->setEnabled(true); chkDiffY->setEnabled(true); chkDiffZ->setEnabled(true);
         chkRefX->setEnabled(true); chkRefY->setEnabled(true); chkRefZ->setEnabled(true);
         if (!sameRefRunType) {
             chkDiffX->setCheckState(Qt::Unchecked); chkDiffY->setCheckState(Qt::Unchecked); chkDiffZ->setCheckState(Qt::Unchecked);
@@ -269,7 +269,7 @@ void TreeViewer::fillSummaryHists(const QString& runNumber) {
 }
 
 void TreeViewer::draw(bool firstDraw, bool is1D) {
-    gStyle->SetOptStat("mrie");
+    gStyle->SetOptStat("mrieks");
     gStyle->SetStatColor(0);
     double xcurrentmin = getCanvas()->PadtoX(getCanvas()->GetUxmin());            
     double xcurrentmax = getCanvas()->PadtoX(getCanvas()->GetUxmax() - 1e-6);            
@@ -359,9 +359,9 @@ void TreeViewer::draw(bool firstDraw, bool is1D) {
 
     updateCanvas();
     if (firstDraw) {
-        xboundmin = getCanvas()->PadtoX(getCanvas()->GetUxmin());
+        xboundmin = getCanvas()->PadtoX(getCanvas()->GetUxmin() - 1e-6);
         xboundmax = getCanvas()->PadtoX(getCanvas()->GetUxmax() - 1e-6);
-        yboundmin = getCanvas()->PadtoY(getCanvas()->GetUymin());
+        yboundmin = getCanvas()->PadtoY(getCanvas()->GetUymin() - 1e-6);
         yboundmax = getCanvas()->PadtoY(getCanvas()->GetUymax() - 1e-6);
     }
 }
@@ -682,9 +682,9 @@ void TreeViewer::on_chkLogX_stateChanged(int state) {
     if (state == Qt::Unchecked) getCanvas()->SetLogx(0);
     else getCanvas()->SetLogx(1);
 
-    xboundmin = getCanvas()->PadtoX(getCanvas()->GetUxmin());            
+    xboundmin = getCanvas()->PadtoX(getCanvas()->GetUxmin() - 1e-6);            
     xboundmax = getCanvas()->PadtoX(getCanvas()->GetUxmax() - 1e-6);            
-    yboundmin = getCanvas()->PadtoY(getCanvas()->GetUymin());            
+    yboundmin = getCanvas()->PadtoY(getCanvas()->GetUymin() - 1e-6);            
     yboundmax = getCanvas()->PadtoY(getCanvas()->GetUymax() - 1e-6); 
 
     updateCanvas();
@@ -698,9 +698,9 @@ void TreeViewer::on_chkLogY_stateChanged(int state) {
         getCanvas()->SetLogy(1);
     }
 
-    xboundmin = getCanvas()->PadtoX(getCanvas()->GetUxmin());            
+    xboundmin = getCanvas()->PadtoX(getCanvas()->GetUxmin() - 1e-6);            
     xboundmax = getCanvas()->PadtoX(getCanvas()->GetUxmax() - 1e-6);            
-    yboundmin = getCanvas()->PadtoY(getCanvas()->GetUymin());            
+    yboundmin = getCanvas()->PadtoY(getCanvas()->GetUymin() - 1e-6);            
     yboundmax = getCanvas()->PadtoY(getCanvas()->GetUymax() - 1e-6); 
 
     updateCanvas();

@@ -165,16 +165,23 @@ void TreeViewerRunInfo::buildTreeInfo(QPair<QString, QString> runid_, QPair<QStr
 	if(not tree or not TString(tree->GetName()).Contains("friend")) continue;
 	currentFriendTrees.push_back(tree->CloneTree());
 	currentTree->AddFriend(currentFriendTrees.back());
+	currentTree->BuildIndex("DeviceId");
 	delete tree;
       }
 
       // Get list of friends
       delete inputCurrentTree;
       currentFile->Close();      
-      if (referenceTree) currentTree->AddFriend(referenceTree, "ref");
+      if (referenceTree){
+	referenceTree->BuildIndex("DeviceId");
+	currentTree->AddFriend(referenceTree, "ref");
+      }
       for(int itree = 0; itree < referenceFriendTrees.size(); itree++){
-	if(currentFriendTrees.size() > itree and currentFriendTrees.at(itree) and referenceFriendTrees.at(itree))
+	if(currentFriendTrees.size() > itree and currentFriendTrees.at(itree) and referenceFriendTrees.at(itree)){
       	  currentFriendTrees.at(itree)->AddFriend(referenceFriendTrees.at(itree),"ref");
+	  referenceFriendTrees.at(itree)->BuildIndex("DeviceId");
+	  currentFriendTrees.at(itree)->BuildIndex("DeviceId");
+	}
       }
     }
   }
@@ -203,7 +210,7 @@ void TreeViewerRunInfo::buildTreeInfo(QPair<QString, QString> runid_, QPair<QStr
       tmpFile->cd();
       referenceTree = inputReferenceTree->CloneTree();
       referenceTree->SetName("referenceTree");
-
+      referenceTree->BuildIndex("DeviceId");
       TIter next(referenceFile->GetListOfKeys());    
       TKey* key;    
       while ((key = (TKey*)next())){
@@ -213,6 +220,7 @@ void TreeViewerRunInfo::buildTreeInfo(QPair<QString, QString> runid_, QPair<QStr
 	if(not tree or not TString(tree->GetName()).Contains("friend")) continue;
 	referenceFriendTrees.push_back(tree->CloneTree());
 	referenceTree->AddFriend(referenceFriendTrees.back());	
+	referenceFriendTrees.back()->BuildIndex("DEviceId");
 	delete tree;
       }      
       delete inputReferenceTree;

@@ -653,6 +653,7 @@ void DBUpload::on_btnUpload_clicked() {
         runTypeMap["TIMING"]    = "ApvTimingParameters";
         runTypeMap["GAINSCAN"]  = "OptoScanParameters";
         runTypeMap["VPSPSCAN"]  = "VpspScanParameters";
+        runTypeMap["SCOPE"]  = "DaqScopModeParameters";
 
         QMap<unsigned,unsigned> uploadMap;
         QMap<unsigned, unsigned>::const_iterator ins_iter = addLevelMap.constBegin();

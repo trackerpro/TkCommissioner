@@ -103,6 +103,7 @@ bool TreeBuilder::buildTree(const QString& filename, const QString &analysisType
     myQuery << getQuery( qPrintable(analysisType) );
     tree = new TTree("DBTree","DBTree");      
     fillTree(tree, qPrintable(analysisType), myQuery.str(), analysisIds);
+    tree->BuildIndex("DeviceId");
     tree->Write();
     file->Close();
     if(Debug::Inst()->getEnabled()) qDebug() << "File recreated";
@@ -189,6 +190,7 @@ bool TreeBuilder::buildMultiPartTree(const QString& filename, QVector<QRunId> ru
     myQuery << getQuery( qPrintable(analysisTypes[0]) );
     TTree* tree = new TTree("DBTree","DBTree");      
     fillTree(tree, qPrintable(analysisTypes[0]), myQuery.str(), analysisIds);
+    tree->BuildIndex("DeviceId");
     tree->Write();
     file->Close();
     if(Debug::Inst()->getEnabled()) qDebug() << "File recreated";
@@ -244,8 +246,6 @@ bool TreeBuilder::buildMultiAnalysisTree(const QString & filename, const QVector
       analysisId.push_back(analysisIds.at(itype));
       fillTree(tree_vec.back(),myType.at(itype),myQuery.at(itype),analysisId);
       tree_vec.back()->BuildIndex("DeviceId");
-      //if(itype > 0)
-      //tree_vec.front()->AddFriend(tree_vec.at(itype));
     }
     
     for(int itree = 0; itree < tree_vec.size(); itree++)
@@ -263,10 +263,8 @@ QString TreeBuilder::loadAnalysis(const QRunId& pair, bool useCache) { // load a
 
   if (pair.second == QString::number(sistrip::CURRENTSTATE)) { // current-state download of FED parameters
     std::stringstream filename;
-    filename << "/opt/cmssw/shifter/avartak/data/" << (QString("CURRENTSTATE_")+pair.first+QString(".root")).toStdString();
-
-    bool res = buildTree(filename.str().c_str(), QString::number(sistrip::CURRENTSTATE),QString::number(sistrip::CURRENTSTATE),QRunId(pair.first,QString::number(sistrip::CURRENTSTATE)), true);
-
+    filename << "/opt/cmssw/shifter/avartak/data/" << (QString("CURRENTSTATE_")+pair.first+QString(".root")).toStdString();    
+    bool res = buildTree(filename.str().c_str(), QString::number(sistrip::CURRENTSTATE),QString::number(sistrip::CURRENTSTATE),QRunId(pair.first,QString::number(sistrip::CURRENTSTATE)),true);
     if (Debug::Inst()->getEnabled()) {
       if (res) {
 	if(Debug::Inst()->getEnabled()) qDebug() << "Tree build successful for CURRENT STATE\n";
@@ -283,8 +281,7 @@ QString TreeBuilder::loadAnalysis(const QRunId& pair, bool useCache) { // load a
     std::stringstream filename;
     filename << "/opt/cmssw/shifter/avartak/data/" << (QString("LASTO2O_")+pair.first+QString(".root")).toStdString();
 
-    bool res = buildTree(filename.str().c_str(), QString::number(sistrip::LASTO2O),QString::number(sistrip::LASTO2O),QRunId(pair.first,QString::number(sistrip::LASTO2O)), true);
-
+    bool res = buildTree(filename.str().c_str(), QString::number(sistrip::LASTO2O),QString::number(sistrip::LASTO2O),QRunId(pair.first,QString::number(sistrip::LASTO2O)),true);
     if (Debug::Inst()->getEnabled()) {
       if (res) {
 	if(Debug::Inst()->getEnabled()) qDebug() << "Tree build successful for LAST O2O STATE\n";
@@ -820,6 +817,7 @@ std::string TreeBuilder::getQuery(const QString& analysisType) {
 
 
 bool TreeBuilder::getState(const QString &partitionName, int state) {
+
     if ( state == sistrip::CURRENTSTATE ) {
         if(Debug::Inst()->getEnabled()) qDebug() << "Creating tree from current state";
     }            
@@ -856,18 +854,14 @@ bool TreeBuilder::getState(const QString &partitionName, int state) {
         devmap[devid] = QPair<unsigned int, int>(detid, i2cad);
     }
 
-    QString currentState("with mypartition as ( select ? name from dual), myvalues as ( select fed.id fedid, fefpga.id feunit, channel.id fechan,apvfed.id apvfed, VALUE  from strip join apvfed on apvid=deviceid join channel using(channelid) join channelpair using(channelpairid) join fefpga using(fefpgaid) join fed using(fedid) join viewcurrentstate a on a.partitionname=( select name from mypartition) and a.partitionid=fed.partitionid and strip.versionmajorid=a.fedversionmajorid and apvid not in ( select deviceid from fedmaskdevice a join viewcurrentstate b on a.VERSIONMAJORID=b.MASKVERSIONMAJORID and a.VERSIONMINORID=b.MASKVERSIONMINORID) ), myconnections as ( select distinct FEDID, FEUNIT, FECHAN, DEVICEID, i2caddress, i2cchannel, ccuaddress, ringslot, fecslot, crateslot, CRATESLOT*power(2,27)+FECSLOT*power(2,22)+RINGSLOT*power(2,18)+CCUADDRESS*power(2,10)+I2CCHANNEL*power(2,5)+((ROUND((I2CADDRESS-.5)/2)-16)+1)*power(2,2)+(case when Mod(I2CADDRESS,2) = 0 then 1 else 2 end) FecKey from ANALYSISFASTFEDCABLING join analysis using(analysisid) join viewcurrentstate using(partitionid) join viewdevice using(deviceid) where viewdevice.partitionname=(select name from mypartition)  ) select myvalues.fedid fedid, myvalues.feunit feunit, myvalues.fechan fechan, myvalues.apvfed feapv, myconnections.deviceid, i2caddress,i2cchannel,ccuaddress,ringslot, fecslot, feckey , value from myvalues inner join myconnections on myvalues.fedid=myconnections.fedid and myvalues.feunit=myconnections.feunit and myvalues.fechan=myconnections.fechan and mod(APVFED,2) <> mod(I2CADDRESS,2) and value is not null order by myvalues.fedid,myvalues.feunit, myvalues.fechan");
+    QString currentState("with mypartition as ( select ? name from dual), myvalues as ( select fed.id fedid, fefpga.id feunit, channel.id fechan,apvfed.id apvfed,channelvalues.coarsedelay coarsedelay,channelvalues.finedelay finedelay ,channelvalues.threshold threshold, VALUE  from strip join apvfed on apvid=deviceid join channel using(channelid) join channelpair using(channelpairid) join channelvalues using(channelid) join fefpga using(fefpgaid) join fed using(fedid) join viewcurrentstate a on a.partitionname=( select name from mypartition) and a.partitionid=fed.partitionid and strip.versionmajorid=a.fedversionmajorid and channelvalues.versionmajorid=a.fedversionmajorid and apvid not in ( select deviceid from fedmaskdevice mask join viewcurrentstate a on mask.VERSIONMAJORID=a.MASKVERSIONMAJORID and mask.VERSIONMINORID=a.MASKVERSIONMINORID) ), myconnections as ( select distinct FEDID, FEUNIT, FECHAN, DEVICEID, i2caddress, i2cchannel, ccuaddress, ringslot, fecslot, crateslot, CRATESLOT*power(2,27)+FECSLOT*power(2,22)+RINGSLOT*power(2,18)+CCUADDRESS*power(2,10)+I2CCHANNEL*power(2,5)+((ROUND((I2CADDRESS-.5)/2)-16)+1)*power(2,2)+(case when Mod(I2CADDRESS,2) = 0 then 1 else 2 end) FecKey from ANALYSISFASTFEDCABLING join analysis using(analysisid) join viewcurrentstate using(partitionid) join viewdevice using(deviceid) where viewdevice.partitionname=(select name from mypartition)  ) select myvalues.fedid fedid, myvalues.feunit feunit, myvalues.fechan fechan, myvalues.apvfed feapv, myconnections.deviceid, i2caddress,i2cchannel,ccuaddress,ringslot, fecslot, feckey , myvalues.coarsedelay, myvalues.finedelay, myvalues.threshold, value from myvalues inner join myconnections on myvalues.fedid=myconnections.fedid and myvalues.feunit=myconnections.feunit and myvalues.fechan=myconnections.fechan and mod(APVFED,2) <> mod(I2CADDRESS,2) and value is not null order by myvalues.fedid,myvalues.feunit, myvalues.fechan");
+
+    QString lastO2O("with mypartition as ( select ? name from dual), myvalues as ( select fed.id fedid, fefpga.id feunit, channel.id fechan,apvfed.id apvfed,channelvalues.coarsedelay coarsedelay,channelvalues.finedelay finedelay ,channelvalues.threshold threshold, VALUE  from strip join apvfed on apvid=deviceid join channel using(channelid) join channelpair using(channelpairid) join channelvalues using(channelid) join fefpga using(fefpgaid) join fed using(fedid) join VIEWLASTO2OPARTITIONS a on a.partitionname=( select name from mypartition) and a.partitionid=fed.partitionid and strip.versionmajorid=a.fedversionmajorid and channelvalues.versionmajorid=a.fedversionmajorid and apvid not in ( select deviceid from fedmaskdevice mask join VIEWLASTO2OPARTITIONS a on mask.VERSIONMAJORID=a.MASKVERSIONMAJORID and mask.VERSIONMINORID=a.MASKVERSIONMINORID) ), myconnections as ( select distinct FEDID, FEUNIT, FECHAN, DEVICEID, i2caddress, i2cchannel, ccuaddress, ringslot, fecslot, crateslot, CRATESLOT*power(2,27)+FECSLOT*power(2,22)+RINGSLOT*power(2,18)+CCUADDRESS*power(2,10)+I2CCHANNEL*power(2,5)+((ROUND((I2CADDRESS-.5)/2)-16)+1)*power(2,2)+(case when Mod(I2CADDRESS,2) = 0 then 1 else 2 end) FecKey from ANALYSISFASTFEDCABLING join analysis using(analysisid) join VIEWLASTO2OPARTITIONS using(partitionid) join viewdevice using(deviceid) where viewdevice.partitionname=(select name from mypartition)  ) select myvalues.fedid fedid, myvalues.feunit feunit, myvalues.fechan fechan, myvalues.apvfed feapv, myconnections.deviceid, i2caddress,i2cchannel,ccuaddress,ringslot, fecslot, feckey , myvalues.coarsedelay, myvalues.finedelay, myvalues.threshold, value from myvalues inner join myconnections on myvalues.fedid=myconnections.fedid and myvalues.feunit=myconnections.feunit and myvalues.fechan=myconnections.fechan and mod(APVFED,2) <> mod(I2CADDRESS,2) and value is not null order by myvalues.fedid,myvalues.feunit, myvalues.fechan");
     
-    QString lastO2O("with mypartition as ( select ? name from dual), myvalues as ( select fed.id fedid, fefpga.id feunit, channel.id fechan,apvfed.id apvfed, VALUE  from strip join apvfed on apvid=deviceid join channel using(channelid) join channelpair using(channelpairid) join fefpga using(fefpgaid) join fed using(fedid) join VIEWLASTO2OPARTITIONS a on a.partitionname=( select name from mypartition) and a.partitionid=fed.partitionid and strip.versionmajorid=a.fedversionmajorid and apvid not in ( select deviceid from fedmaskdevice a join VIEWLASTO2OPARTITIONS b on a.VERSIONMAJORID=b.MASKVERSIONMAJORID and a.VERSIONMINORID=b.MASKVERSIONMINORID) ), myconnections as ( select distinct FEDID, FEUNIT, FECHAN, DEVICEID, i2caddress, i2cchannel, ccuaddress, ringslot, fecslot, crateslot, CRATESLOT*power(2,27)+FECSLOT*power(2,22)+RINGSLOT*power(2,18)+CCUADDRESS*power(2,10)+I2CCHANNEL*power(2,5)+((ROUND((I2CADDRESS-.5)/2)-16)+1)*power(2,2)+(case when Mod(I2CADDRESS,2) = 0 then 1 else 2 end) FecKey from ANALYSISFASTFEDCABLING join analysis using(analysisid) join VIEWLASTO2OPARTITIONS using(partitionid) join viewdevice using(deviceid) where viewdevice.partitionname=(select name from mypartition)  ) select myvalues.fedid fedid, myvalues.feunit feunit, myvalues.fechan fechan, myvalues.apvfed feapv, myconnections.deviceid, i2caddress,i2cchannel,ccuaddress,ringslot, fecslot, feckey , value from myvalues inner join myconnections on myvalues.fedid=myconnections.fedid and myvalues.feunit=myconnections.feunit and myvalues.fechan=myconnections.fechan and mod(APVFED,2) <> mod(I2CADDRESS,2) and value is not null order by myvalues.fedid,myvalues.feunit, myvalues.fechan");
     
-    
-    double FedId, FeUnit, FeChan, FeApv, DeviceId, Fec, Ring, Ccu, I2CChannel,I2CAddress, Detid, PedsMean, NoiseMean, Noisy;
+    double FedId, FeUnit, FeChan, FeApv, DeviceId, Fec, Ring, Ccu, I2CChannel,I2CAddress, Detid, PedsMean, NoiseMean, Noisy, CoarseDelay, FineDelay, Threshold;
     uint32_t FecKey;
-    Double_t Noise[128];
-    Double_t Pedestal[128];
-    Double_t lowThreshold[128];
-    Double_t highThreshold[128];
-    Double_t NoisyStrips[128];
+    Double_t Noise[128], Pedestal[128], lowThreshold[128], highThreshold[128], NoisyStrips[128];
     
     QSqlQuery getClob;
     if ( state == sistrip::CURRENTSTATE ) getClob.prepare(currentState);
@@ -902,15 +896,18 @@ bool TreeBuilder::getState(const QString &partitionName, int state) {
     tree->Branch("I2CChannel",&I2CChannel);
     tree->Branch("I2CAddress",&I2CAddress);
     tree->Branch("Detid",&Detid);
+    tree->Branch("FecKey",&FecKey);
+    tree->Branch("CoarseDelay",&CoarseDelay);
+    tree->Branch("FineDelay",&FineDelay);
+    tree->Branch("Threshold",&Threshold);
+    tree->Branch("PedsMean",&PedsMean);
+    tree->Branch("NoiseMean",&NoiseMean);
+    tree->Branch("Noisy",&Noisy);
     tree->Branch("Noise",&Noise,"Noise[128]/D");
     tree->Branch("Pedestal",&Pedestal,"Pedestal[128]/D");
     tree->Branch("lowThreshold",&lowThreshold,"lowThreshold[128]/D");
     tree->Branch("highThreshold",&highThreshold,"highThreshold[128]/D");
     tree->Branch("NoisyStrips",&NoisyStrips,"NoisyStrips[128]/D");
-    tree->Branch("PedsMean",&PedsMean);
-    tree->Branch("NoiseMean",&NoiseMean);
-    tree->Branch("Noisy",&Noisy);
-    tree->Branch("FecKey",&FecKey);
     
     if(Debug::Inst()->getEnabled()) qDebug() << "Tree booked, now retrieving results";
     
@@ -931,9 +928,12 @@ bool TreeBuilder::getState(const QString &partitionName, int state) {
         Ring       = getClob.value(8).toDouble();
         Fec        = getClob.value(9).toDouble();
         FecKey     = getClob.value(10).toUInt();
+	CoarseDelay = getClob.value(11).toDouble();
+	FineDelay  = getClob.value(12).toDouble();
+	Threshold  = getClob.value(13).toDouble();
         Detid      = double(devmap[getClob.value(4).toUInt()].first);
 
-        QByteArray array = QByteArray::fromBase64 (getClob.value(11).toByteArray()).toHex();
+        QByteArray array = QByteArray::fromBase64 (getClob.value(14).toByteArray()).toHex();
         int index = 0;
         for( int i = 0; i < array.size(); i+=8, ++index ) {
             QByteArray mystrip = array.mid(i,8);
@@ -974,8 +974,7 @@ bool TreeBuilder::getState(const QString &partitionName, int state) {
     if(Debug::Inst()->getEnabled()) qDebug() << "Done filling, writing results";
     file->Write();
     file->Close();
-    
-    return buildTree(path+name+QString(".root"),QString::number(state),QString::number(state),QRunId(partitionName,QString::number(state)),true);
 
+    return true;
   
 }

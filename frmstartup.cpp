@@ -160,15 +160,15 @@ void Startup::on_btnUpdateRuns_clicked() {
 
 void Startup::on_btnState_clicked() {
     if (cmbState->currentText() == "Select state...") return;
-    
+
     if (Debug::Inst()->getEnabled()) qDebug() << "Creating tree from current state for partition " << qPrintable(currentPartitionName) << "\n";
     tmpfiles.push_back(QString("/opt/cmssw/shifter/avartak/data/tmp/curstatetmp_")+QDateTime::currentDateTime().toString("dd_MM_yyyy_hh_mm_ss_zzz")+QString(".root")); 
     TreeViewer *treeview = new TreeViewer(tmpfiles.back());
 
     bool addRunResult = false;
     if (cmbState->currentText() == "Current State") {
-        TreeBuilder::Inst()->getState(currentPartitionName, sistrip::CURRENTSTATE);
-        addRunResult = treeview->addRun(currentPartitionName, QString::number(sistrip::CURRENTSTATE), true);
+      TreeBuilder::Inst()->getState(currentPartitionName, sistrip::CURRENTSTATE);
+      addRunResult = treeview->addRun(currentPartitionName, QString::number(sistrip::CURRENTSTATE), true);
     } 
     else if (cmbState->currentText() == "Last O2O'ed State") {
         TreeBuilder::Inst()->getState(currentPartitionName,sistrip::LASTO2O);
