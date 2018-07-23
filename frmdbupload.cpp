@@ -521,566 +521,605 @@ void DBUpload::addSkipChannel(QPair<unsigned, unsigned> keys) {
 
 void DBUpload::on_btnUpload_clicked() {
 
-    if (currentRun.toInt() == sistrip::MULTIPART) {
+  if (currentRun.toInt() == sistrip::MULTIPART) { // Timing O2O from multi-partition
 
-        if (QMessageBox::question(NULL, QObject::tr("Confirmation"), QObject::tr("You are going to perform Timing O2O. Are you sure you want to continue?"), QMessageBox::Yes, QMessageBox::No) == QMessageBox::No) return;
+      // User can select whether continue with the O2O or not
+      if (QMessageBox::question(NULL, QObject::tr("Confirmation"), QObject::tr("You are going to perform Timing O2O. Are you sure you want to continue?"), QMessageBox::Yes, QMessageBox::No) == QMessageBox::No) return;
 
+      // Make additional check: coherent numbers from the selected runs and the current state
+      QStringList parts = currentPartition.split("*");
+      std::vector<std::string> runseq;
+      std::vector<std::string> partseq;
+      for (int i = 1; i < parts.size(); i++) {
+	QString part = parts.at(i);
+	QStringList subparts = part.split("#");
+	partseq.push_back(qPrintable(subparts[0]));
+	runseq.push_back(qPrintable(subparts[1]));
+      }
 
-        QString nextRun;
-        QString iovQueryStr("select max(runnumbertbl.runnumber+1) runnumber from CMS_RUNINFO.runnumbertbl");
-        QSqlQuery iovQuery(iovQueryStr);
+      std::vector<int> ndevices;
+      for(size_t irun = 0; irun < runseq.size(); irun++){
+	std::stringstream queryss; 
+	queryss << "with currentsettings as ( select DEVICEID, BIAS0, BIAS1, BIAS2, GAIN0, GAIN1, GAIN2 from laserdriver where ";
+	queryss << "(VERSIONMAJORID,VERSIONMINORID) in ( select FECVERSIONMAJORID,FECVERSIONMINORID from viewcurrentstate ) ), ";
+	queryss << "runsettings as ( select DEVICEID, BIAS0, BIAS1, BIAS2, GAIN0, GAIN1, GAIN2 from laserdriver where ";
+	queryss << "(VERSIONMAJORID,VERSIONMINORID) in ( select FECVERSIONMAJORID,FECVERSIONMINORID from viewallrun ";
+	queryss << "where runnumber in (" << runseq.at(irun).c_str() <<") and partitionname in ('"<< partseq.at(irun).c_str() <<"') ) ) select count(*) from currentsettings ";
+	queryss << "a join runsettings b using(deviceid) where ( a.BIAS0 <> b.BIAS0 or a.BIAS1 <> b.BIAS1 or a.BIAS2 <> b.BIAS2 or a.GAIN0 <> b.GAIN0 or  a.GAIN1 <> b.GAIN1 or a.GAIN2 <> b.GAIN2 )";
+	QString myQuery(queryss.str().c_str());
+	QSqlQuery query;
+	query.prepare(myQuery);
+	query.exec();
+	query.first();
+	ndevices.push_back(query.value(0).toInt());
+      }
 
-        while (iovQuery.next()) nextRun = iovQuery.value(0).toString();
+      std::string parition_with_problems;
+      int devices_not_sync = 0;
+      for(size_t irun =0; irun< partseq.size(); irun++){
+	if(ndevices.at(irun) != 0){
+	  if(parition_with_problems.empty())
+	    parition_with_problems += "Problem with partition: "+partseq.at(irun);
+	  else
+	    parition_with_problems += ", "+partseq.at(irun);	    
+	  devices_not_sync += ndevices.at(irun);
+	}
+      }
+      
+      if(devices_not_sync != 0){
+	if(QMessageBox::information(NULL,QObject::tr("Mismatch"),QObject::tr(("Mismatch between GAIN settings of the current state and those selected with the timing O2O \n"+parition_with_problems+" \nQuit the process!").c_str()),QMessageBox::Yes) == QMessageBox::Yes) return;
+      }
 
-        skipss.str("");
-        infoss.str("");
-        infoss << "<html>" << std::endl;
-        infoss << "<b>Timing O2O : </b>" << "<br/>";
-        infoss << "IOV : " << qPrintable(nextRun) << "<br/>";
+      // create the IOV number
+      QString nextRun;
+      QString iovQueryStr("select max(runnumbertbl.runnumber+1) runnumber from CMS_RUNINFO.runnumbertbl");
+      QSqlQuery iovQuery(iovQueryStr);
 
-        QString partFilename = "/nfshome0/trackerpro/o2o/scripts/TimingO2O_Partitions.py";
-        QString skipFilename = "/nfshome0/trackerpro/o2o/scripts/TimingO2O_SkippedChannels.py";
+      while (iovQuery.next()) nextRun = iovQuery.value(0).toString();
 
-        std::ofstream partFile;
-        std::ofstream skipFile;
+      skipss.str("");
+      infoss.str("");
+      infoss << "<html>" << std::endl;
+      infoss << "<b>Timing O2O : </b>" << "<br/>";
+      infoss << "IOV : " << qPrintable(nextRun) << "<br/>";
+      
+      QString partFilename = "/nfshome0/trackerpro/o2o/scripts/TimingO2O_Partitions.py";
+      QString skipFilename = "/nfshome0/trackerpro/o2o/scripts/TimingO2O_SkippedChannels.py";
 
-        partFile.open(partFilename.toStdString().c_str());
-        skipFile.open(skipFilename.toStdString().c_str());
+      std::ofstream partFile;
+      std::ofstream skipFile;
 
-        QMap<unsigned,unsigned> uploadMap;
-        QMap<unsigned, unsigned>::const_iterator ins_iter = addLevelMap.constBegin();
-        while (ins_iter != addLevelMap.constEnd()) {
-            uploadMap[ins_iter.key()] = ins_iter.value();
-            ++ins_iter;
-        }
-        ins_iter = selLevelMap.constBegin();
-        while (ins_iter != selLevelMap.constEnd()) {
-            uploadMap[ins_iter.key()] = ins_iter.value();
-            ++ins_iter;
-        }
+      partFile.open(partFilename.toStdString().c_str());
+      skipFile.open(skipFilename.toStdString().c_str());
 
-        partFile << partss.str().c_str();
-        if (chkSkip->isChecked()) {
-            QMap<unsigned, unsigned>::const_iterator map_iter = uploadMap.constBegin();
-            while (map_iter != uploadMap.constEnd()) {
-                if (unselLevelMap.constFind(map_iter.key()) != unselLevelMap.constEnd()) {
-                    ++map_iter;
-                    continue;
-                }
-                if (selLevel == "FED") {
-                    SiStripFedKey fedkey(map_iter.key());
-                    skipss << "\tcms.PSet(" << std::endl;
-                    skipss << "\t\t fedId = cms.untracked.uint32("  << fedkey.fedId()  << ")," << std::endl;
-                    skipss << "\t\t feUnit = cms.untracked.uint32(" << fedkey.feUnit() << ")," << std::endl;
-                    skipss << "\t\t feChan = cms.untracked.uint32(" << fedkey.feChan() << ")," << std::endl;
-                    skipss << "\t\t fedApv = cms.untracked.uint32(" << fedkey.fedApv() << ")"  << std::endl;
-                    skipss << "\t)," << std::endl;
-            
-                }
-                else {
-                    SiStripFecKey feckey(map_iter.key());
-                    skipss << "\tcms.PSet(" << std::endl;
-                    skipss << "\t\t fecCrate = cms.untracked.uint32(" << feckey.fecCrate()  << ")," << std::endl;
-                    skipss << "\t\t fecSlot  = cms.untracked.uint32(" << feckey.fecSlot()   << ")," << std::endl;
-                    skipss << "\t\t fecRing  = cms.untracked.uint32(" << feckey.fecRing()   << ")," << std::endl;
-                    skipss << "\t\t ccuAddr  = cms.untracked.uint32(" << feckey.ccuAddr()   << ")," << std::endl;
-                    skipss << "\t\t ccuChan  = cms.untracked.uint32(" << feckey.ccuChan()   << ")," << std::endl;
-                    skipss << "\t\t lldChan  = cms.untracked.uint32(" << feckey.i2cAddr()   << ")," << std::endl;
-                    skipss << "\t\t i2cAddr  = cms.untracked.uint32(" << 0                  << ")"  << std::endl;
-                    skipss << "\t)," << std::endl;
-            
-                }
-                ++map_iter;
-            }
-            skipFile << skipss.str().c_str();
-        }
+      QMap<unsigned,unsigned> uploadMap;
+      QMap<unsigned, unsigned>::const_iterator ins_iter = addLevelMap.constBegin();
+      while (ins_iter != addLevelMap.constEnd()) {
+	uploadMap[ins_iter.key()] = ins_iter.value();
+	++ins_iter;
+      }
+      ins_iter = selLevelMap.constBegin();
+      while (ins_iter != selLevelMap.constEnd()) {
+	uploadMap[ins_iter.key()] = ins_iter.value();
+	++ins_iter;
+      }
 
-        partFile.close();
-        skipFile.close();
+      partFile << partss.str().c_str();
+      if (chkSkip->isChecked()) {
+	QMap<unsigned, unsigned>::const_iterator map_iter = uploadMap.constBegin();
+	while (map_iter != uploadMap.constEnd()) {
+	  if (unselLevelMap.constFind(map_iter.key()) != unselLevelMap.constEnd()) {
+	    ++map_iter;
+	    continue;
+	  }
+	  if (selLevel == "FED") {
+	    SiStripFedKey fedkey(map_iter.key());
+	    skipss << "\tcms.PSet(" << std::endl;
+	    skipss << "\t\t fedId = cms.untracked.uint32("  << fedkey.fedId()  << ")," << std::endl;
+	    skipss << "\t\t feUnit = cms.untracked.uint32(" << fedkey.feUnit() << ")," << std::endl;
+	    skipss << "\t\t feChan = cms.untracked.uint32(" << fedkey.feChan() << ")," << std::endl;
+	    skipss << "\t\t fedApv = cms.untracked.uint32(" << fedkey.fedApv() << ")"  << std::endl;
+	    skipss << "\t)," << std::endl;            
+	  }
+	  else {
+	    SiStripFecKey feckey(map_iter.key());
+	    skipss << "\tcms.PSet(" << std::endl;
+	    skipss << "\t\t fecCrate = cms.untracked.uint32(" << feckey.fecCrate()  << ")," << std::endl;
+	    skipss << "\t\t fecSlot  = cms.untracked.uint32(" << feckey.fecSlot()   << ")," << std::endl;
+	    skipss << "\t\t fecRing  = cms.untracked.uint32(" << feckey.fecRing()   << ")," << std::endl;
+	    skipss << "\t\t ccuAddr  = cms.untracked.uint32(" << feckey.ccuAddr()   << ")," << std::endl;
+	    skipss << "\t\t ccuChan  = cms.untracked.uint32(" << feckey.ccuChan()   << ")," << std::endl;
+	    skipss << "\t\t lldChan  = cms.untracked.uint32(" << feckey.i2cAddr()   << ")," << std::endl;
+	    skipss << "\t\t i2cAddr  = cms.untracked.uint32(" << 0                  << ")"  << std::endl;
+	    skipss << "\t)," << std::endl;
+	    
+	  }
+	  ++map_iter;
+	}
+	skipFile << skipss.str().c_str();
+      }
 
-        QString sveto = (chkVeto->isChecked() ? "0" : "1");
-        QStringList commandArgs;
-        commandArgs << "/nfshome0/trackerpro/o2o/scripts/runGainO2O.sh" << sveto << nextRun << partFilename << skipFilename;
-        //commandArgs << "/nfshome0/trackerpro/o2o/scripts/testGainO2O.sh" << sveto << nextRun << partFilename << skipFilename;
-        //commandArgs << "/nfshome0/trackerpro/o2o/scripts/simpletest.sh" << sveto << nextRun << partFilename << skipFilename;
+      partFile.close();
+      skipFile.close();
 
-        bool o2oresult = false;
-        QProcess* proc = new QProcess(this);
-        TkTerminalDialog* timingO2OTerm = new TkTerminalDialog(this);
-        timingO2OTerm->setProcessPtr(proc);
+      QString sveto = (chkVeto->isChecked() ? "0" : "1");
+      QStringList commandArgs;
+      commandArgs << "/nfshome0/trackerpro/o2o/scripts/runGainO2O.sh" << sveto << nextRun << partFilename << skipFilename;
+      //commandArgs << "/nfshome0/trackerpro/o2o/scripts/testGainO2O.sh" << sveto << nextRun << partFilename << skipFilename;
 
-        connect( proc, SIGNAL(readyReadStandardOutput())          , timingO2OTerm, SLOT(readFromStdout())  );
-        connect( proc, SIGNAL(finished(int, QProcess::ExitStatus)), timingO2OTerm, SLOT(processFinished(int, QProcess::ExitStatus)) );
-        QTimer *timer = new QTimer(this);
-        connect(timer, SIGNAL(timeout()), timingO2OTerm, SLOT(executeWaitForReadyRead()));
-        timer->start(100);
-
-        proc->start(commandArgs.join(" "));
-        if (!proc->waitForStarted()) {
-            infoss << "Could not start analysis" << qPrintable(nextRun) << "<br/>";
-            delete timingO2OTerm;
-            o2oresult = false;
-        }
-        else {
-            if (timingO2OTerm->exec()==QDialog::Accepted) o2oresult = true;
-            else o2oresult = false;
-        }
-
-        if (o2oresult) infoss << "<b>O2O process completed successfully</b>" << "<br/>";
-        else           infoss << "<b>O2O process failed</b>"                 << "<br/>";
-
-        infoss << "</html>" << std::endl;
-        QTextCursor cursor(txtCurRunInfo->textCursor());
-        cursor.insertHtml(infoss.str().c_str());
-    }
-
-    else {
-        QFile file("/opt/cmssw/scripts/analysis_template_test.py");
-        if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) return;
-        
-        QByteArray total;
-        QByteArray line;
-        while (!file.atEnd()) {
-            line = file.readAll();
-            total.append(line);
-        }
+      bool o2oresult = false;
+      QProcess* proc = new QProcess(this);
+      TkTerminalDialog* timingO2OTerm = new TkTerminalDialog(this);
+      timingO2OTerm->setProcessPtr(proc);
+      connect( proc, SIGNAL(readyReadStandardOutput())          , timingO2OTerm, SLOT(readFromStdout())  );
+      connect( proc, SIGNAL(finished(int, QProcess::ExitStatus)), timingO2OTerm, SLOT(processFinished(int, QProcess::ExitStatus)) );
+      QTimer *timer = new QTimer(this);
+      connect(timer, SIGNAL(timeout()), timingO2OTerm, SLOT(executeWaitForReadyRead()));
+      timer->start(100);
+      proc->start(commandArgs.join(" "));
+      if (!proc->waitForStarted()) {
+	infoss << "Could not start analysis" << qPrintable(nextRun) << "<br/>";
+	delete timingO2OTerm;
+	o2oresult = false;
+      }
+      else {
+	if (timingO2OTerm->exec()==QDialog::Accepted) o2oresult = true;
+	else o2oresult = false;
+      }
+      
+      if (o2oresult) infoss << "<b>O2O process completed successfully</b>" << "<br/>";
+      else           infoss << "<b>O2O process failed</b>"                 << "<br/>";
+      
+      infoss << "</html>" << std::endl;
+      QTextCursor cursor(txtCurRunInfo->textCursor());
+      cursor.insertHtml(infoss.str().c_str());
+  }  
+  else {
    
-        QString sveto = (chkVeto->isChecked() ? "True" : "False");
-
-        QMap<QString, QString> runTypeMap;
-        runTypeMap["PEDESTAL"]  = "PedestalsParameters";
-        runTypeMap["PEDESTALS"] = "PedestalsParameters";
-        runTypeMap["TIMING"]    = "ApvTimingParameters";
-        runTypeMap["GAINSCAN"]  = "OptoScanParameters";
-        runTypeMap["VPSPSCAN"]  = "VpspScanParameters";
-        runTypeMap["SCOPE"]  = "DaqScopModeParameters";
-
-        QMap<unsigned,unsigned> uploadMap;
-        QMap<unsigned, unsigned>::const_iterator ins_iter = addLevelMap.constBegin();
-        while (ins_iter != addLevelMap.constEnd()) {
-            uploadMap[ins_iter.key()] = ins_iter.value();
-            ++ins_iter;
-        }
-        ins_iter = selLevelMap.constBegin();
-        while (ins_iter != selLevelMap.constEnd()) {
-            uploadMap[ins_iter.key()] = ins_iter.value();
-            ++ins_iter;
-        }
-
-        if (chkSkip->isChecked() && uploadMap.size() > 0) {
-            if (runTypeMap.contains(analysisType)) {
-                QString runtypestr = "process.db_client.";
-                runtypestr += runTypeMap[analysisType];
-                total.append(runtypestr+".doSelectiveUpload = cms.bool(True)\n");
-                total.append(runtypestr+".vetoModules = cms.bool(");
-                total.append(sveto);
-                total.append(")\n");
-                QMap<unsigned, unsigned>::const_iterator sm_iter = uploadMap.constBegin();
-
-                if (selLevel == "FED") {
-                    total.append(runtypestr+".fedMaskVector = cms.vuint32(");
-                    bool firstWritten = false;
-                    while (sm_iter != uploadMap.constEnd()) {
-                        if (unselLevelMap.constFind(sm_iter.key()) != unselLevelMap.constEnd()) {
-                            ++sm_iter;
-                            continue;
-                        }
-                        SiStripFedKey fedkey(sm_iter.key());
-                        if (firstWritten) total.append(",");
-                        total.append(QString::number(fedkey.fedId()));
-                        firstWritten = true;
-                        ++sm_iter;
-                    }
-                    total.append(")\n");
-                }
-                else if (selLevel == "FULL" || selLevel == "FEC" || selLevel == "RING" || selLevel == "CCU" || selLevel == "CCUCHAN") {
-                    total.append(runtypestr+".fecMaskVector = cms.vuint32(");
-                    sm_iter = uploadMap.constBegin();
-                    bool firstWritten = false;
-                    while (sm_iter != uploadMap.constEnd()) {
-                        if (unselLevelMap.constFind(sm_iter.key()) != unselLevelMap.constEnd()) {
-                            ++sm_iter;
-                            continue;
-                        }
-                        SiStripFecKey feckey(sm_iter.key());
-                        if (firstWritten) total.append(",");
-                        total.append(QString::number(feckey.fecSlot()));
-                        firstWritten = true;
-                        ++sm_iter;
-                    }
-                    total.append(")\n");
-                    total.append(runtypestr+".ringVector = cms.vuint32(");
-                    sm_iter = uploadMap.constBegin();
-                    firstWritten = false;
-                    while (sm_iter != uploadMap.constEnd()) {
-                        if (unselLevelMap.constFind(sm_iter.key()) != unselLevelMap.constEnd()) {
-                            ++sm_iter;
-                            continue;
-                        }
-                        SiStripFecKey feckey(sm_iter.key());
-                        if (firstWritten) total.append(",");
-                        total.append(QString::number(feckey.fecRing()));
-                        firstWritten = true;
-                        ++sm_iter;
-                    }
-                    total.append(")\n");
-                    total.append(runtypestr+".ccuVector = cms.vuint32(");
-                    sm_iter = uploadMap.constBegin();
-                    firstWritten = false;
-                    while (sm_iter != uploadMap.constEnd()) {
-                        if (unselLevelMap.constFind(sm_iter.key()) != unselLevelMap.constEnd()) {
-                            ++sm_iter;
-                            continue;
-                        }
-                        SiStripFecKey feckey(sm_iter.key());
-                        if (firstWritten) total.append(",");
-                        total.append(QString::number(feckey.ccuAddr()));
-                        firstWritten = true;
-                        ++sm_iter;
-                    }
-                    total.append(")\n");
-                    total.append(runtypestr+".i2cChanVector = cms.vuint32(");
-                    sm_iter = uploadMap.constBegin();
-                    firstWritten = false;
-                    while (sm_iter != uploadMap.constEnd()) {
-                        if (unselLevelMap.constFind(sm_iter.key()) != unselLevelMap.constEnd()) {
-                            ++sm_iter;
-                            continue;
-                        }
-                        SiStripFecKey feckey(sm_iter.key());
-                        if (firstWritten) total.append(",");
-                        total.append(QString::number(feckey.ccuChan()));
-                        firstWritten = true;
-                        ++sm_iter;
-                    }
-                    total.append(")\n");
-                    total.append(runtypestr+".lldChanVector = cms.vuint32(");
-                    sm_iter = uploadMap.constBegin();
-                    firstWritten = false;
-                    while (sm_iter != uploadMap.constEnd()) {
-                        if (unselLevelMap.constFind(sm_iter.key()) != unselLevelMap.constEnd()) {
-                            ++sm_iter;
-                            continue;
-                        }
-                        SiStripFecKey feckey(sm_iter.key());
-                        if (firstWritten) total.append(",");
-                        total.append(QString::number(feckey.lldChan()));
-                        firstWritten = true;
-                        ++sm_iter;
-                    }
-                    total.append(")\n");
-                }
-            }
-        }
-        
-        QFile outfile("/opt/cmssw/scripts/selectiveupload_template.py");
-        outfile.open(QIODevice::WriteOnly | QIODevice::Text);
-        QTextStream outstream(&outfile);
-        outstream << total;
-        outfile.close();
-        
-        if(Debug::Inst()->getEnabled()) qDebug() << total;
-        //qDebug() << total;
-        
-        QStringList commandArgs;
-        QString uploadString;
-        QString uploadAnalString;
-        QString useClientString;
-        QString saveClientString;
-        QString disableModulesString;
-        
-        uploadString = "true";
-        uploadAnalString = "true";
-        useClientString="true";
-        saveClientString="true";
-        disableModulesString="false";
-        
-        if (uploadString == "true") {
-            if (QMessageBox::question(NULL, QObject::tr("Confirmation"), QObject::tr("You are going to upload run analysis results to the configuration database. You should have already run the same analysis and verified the quality of the run. Do you want to continue?"), QMessageBox::Yes, QMessageBox::No) == QMessageBox::No) return;
-        }
-        
-        commandArgs << currentRun << uploadString << uploadAnalString << currentPartition << useClientString << disableModulesString << saveClientString;
-       
-        QDir fffdir("/raid/fff");
-        QStringList runFilter;
-        runFilter << "*run"+currentRun+"*";
-        QStringList runs = fffdir.entryList(runFilter, QDir::Dirs);
-
-        TkTerminal* terminal = new TkTerminal();
-        if (runs.size() > 0) terminal->startProcess("/opt/cmssw/scripts/run_analysis_selup_new.sh", commandArgs);
-        else                 terminal->startProcess("/opt/cmssw/scripts/run_analysis_selup.sh", commandArgs);
-        if (terminal->didStartFail()) delete terminal;
-        else emit showTabSignal(terminal, "Run Analysis");
-
+    QFile file("/opt/cmssw/scripts/analysis_template_new_cfg.py");
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) return;
+    
+    QByteArray total;
+    QByteArray line;
+    while (!file.atEnd()) {
+      line = file.readAll();
+      total.append(line);
     }
+    
+    QString sveto = (chkVeto->isChecked() ? "True" : "False");
+
+    QMap<QString, QString> runTypeMap;
+    runTypeMap["PEDESTAL"]  = "PedestalsParameters";
+    runTypeMap["PEDESTALS"] = "PedestalsParameters";
+    runTypeMap["TIMING"]    = "ApvTimingParameters";
+    runTypeMap["GAINSCAN"]  = "OptoScanParameters";
+    runTypeMap["VPSPSCAN"]  = "VpspScanParameters";
+    runTypeMap["SCOPE"]     = "DaqScopModeParameters";
+    
+    QMap<unsigned,unsigned> uploadMap;
+    QMap<unsigned, unsigned>::const_iterator ins_iter = addLevelMap.constBegin();
+    while (ins_iter != addLevelMap.constEnd()) {
+      uploadMap[ins_iter.key()] = ins_iter.value();
+      ++ins_iter;
+    }
+    ins_iter = selLevelMap.constBegin();
+    while (ins_iter != selLevelMap.constEnd()) {
+      uploadMap[ins_iter.key()] = ins_iter.value();
+      ++ins_iter;
+    }
+    
+    if (chkSkip->isChecked() && uploadMap.size() > 0) {
+      if (runTypeMap.contains(analysisType)) {
+	QString runtypestr = "process.db_client.";
+	runtypestr += runTypeMap[analysisType];
+	total.append(runtypestr+".doSelectiveUpload = cms.bool(True)\n");
+	total.append(runtypestr+".vetoModules = cms.bool(");
+	total.append(sveto);
+	total.append(")\n");
+	QMap<unsigned, unsigned>::const_iterator sm_iter = uploadMap.constBegin();
+	
+	if (selLevel == "FED") {
+	  total.append(runtypestr+".fedMaskVector = cms.vuint32(");
+	  bool firstWritten = false;
+	  while (sm_iter != uploadMap.constEnd()) {
+	    if (unselLevelMap.constFind(sm_iter.key()) != unselLevelMap.constEnd()) {
+	      ++sm_iter;
+	      continue;
+	    }
+	    SiStripFedKey fedkey(sm_iter.key());
+	    if (firstWritten) total.append(",");
+	    total.append(QString::number(fedkey.fedId()));
+	    firstWritten = true;
+	    ++sm_iter;
+	  }
+	  total.append(")\n");
+	}
+	else if (selLevel == "FULL" || selLevel == "FEC" || selLevel == "RING" || selLevel == "CCU" || selLevel == "CCUCHAN") {
+	  total.append(runtypestr+".fecMaskVector = cms.vuint32(");
+	  sm_iter = uploadMap.constBegin();
+	  bool firstWritten = false;
+	  while (sm_iter != uploadMap.constEnd()) {
+	    if (unselLevelMap.constFind(sm_iter.key()) != unselLevelMap.constEnd()) {
+	      ++sm_iter;
+	      continue;
+	    }
+	    SiStripFecKey feckey(sm_iter.key());
+	    if (firstWritten) total.append(",");
+	    total.append(QString::number(feckey.fecSlot()));
+	    firstWritten = true;
+	    ++sm_iter;
+	  }
+	  total.append(")\n");
+	  total.append(runtypestr+".ringVector = cms.vuint32(");
+	  sm_iter = uploadMap.constBegin();
+	  firstWritten = false;
+	  while (sm_iter != uploadMap.constEnd()) {
+	    if (unselLevelMap.constFind(sm_iter.key()) != unselLevelMap.constEnd()) {
+	      ++sm_iter;
+	      continue;
+	    }
+	    SiStripFecKey feckey(sm_iter.key());
+	    if (firstWritten) total.append(",");
+	    total.append(QString::number(feckey.fecRing()));
+	    firstWritten = true;
+	    ++sm_iter;
+	  }
+	  total.append(")\n");
+	  total.append(runtypestr+".ccuVector = cms.vuint32(");
+	  sm_iter = uploadMap.constBegin();
+	  firstWritten = false;
+	  while (sm_iter != uploadMap.constEnd()) {
+	    if (unselLevelMap.constFind(sm_iter.key()) != unselLevelMap.constEnd()) {
+	      ++sm_iter;
+	      continue;
+	    }
+	    SiStripFecKey feckey(sm_iter.key());
+	    if (firstWritten) total.append(",");
+	    total.append(QString::number(feckey.ccuAddr()));
+	    firstWritten = true;
+	    ++sm_iter;
+	  }
+	  total.append(")\n");
+	  total.append(runtypestr+".i2cChanVector = cms.vuint32(");
+	  sm_iter = uploadMap.constBegin();
+	  firstWritten = false;
+	  while (sm_iter != uploadMap.constEnd()) {
+	    if (unselLevelMap.constFind(sm_iter.key()) != unselLevelMap.constEnd()) {
+	      ++sm_iter;
+	      continue;
+	    }
+	    SiStripFecKey feckey(sm_iter.key());
+	    if (firstWritten) total.append(",");
+	    total.append(QString::number(feckey.ccuChan()));
+	    firstWritten = true;
+	    ++sm_iter;
+	  }
+	  total.append(")\n");
+	  total.append(runtypestr+".lldChanVector = cms.vuint32(");
+	  sm_iter = uploadMap.constBegin();
+	  firstWritten = false;
+	  while (sm_iter != uploadMap.constEnd()) {
+	    if (unselLevelMap.constFind(sm_iter.key()) != unselLevelMap.constEnd()) {
+	      ++sm_iter;
+	      continue;
+	    }
+	    SiStripFecKey feckey(sm_iter.key());
+	    if (firstWritten) total.append(",");
+	    total.append(QString::number(feckey.lldChan()));
+	    firstWritten = true;
+	    ++sm_iter;
+	  }
+	  total.append(")\n");
+	}
+      }
+    }
+    
+    QFile outfile("/opt/cmssw/scripts/selectiveupload_template.py");
+    outfile.open(QIODevice::WriteOnly | QIODevice::Text);
+    QTextStream outstream(&outfile);
+    outstream << total;
+    outfile.close();
+    
+    if(Debug::Inst()->getEnabled()) qDebug() << total;
+    
+    QStringList commandArgs;
+    QString uploadString;
+    QString uploadAnalString;
+    QString useClientString;
+    QString saveClientString;
+    QString disableModulesString;
+    
+    uploadString = "true";
+    uploadAnalString = "true";
+    useClientString="true";
+    saveClientString="true";
+    disableModulesString="false";
+    
+    if (uploadString == "true") {
+      if (QMessageBox::question(NULL, QObject::tr("Confirmation"), QObject::tr("You are going to upload run analysis results to the configuration database. You should have already run the same analysis and verified the quality of the run. Do you want to continue?"), QMessageBox::Yes, QMessageBox::No) == QMessageBox::No) return;
+        }
+        
+    commandArgs << currentRun << uploadString << uploadAnalString << currentPartition << useClientString << disableModulesString << saveClientString;
+       
+    QDir fffdir("/raid/fff");
+    QStringList runFilter;
+    runFilter << "*run"+currentRun+"*";
+    QStringList runs = fffdir.entryList(runFilter, QDir::Dirs);
+    
+    TkTerminal* terminal = new TkTerminal();
+    if (runs.size() > 0) terminal->startProcess("/opt/cmssw/scripts/run_analysis_selup_new.sh", commandArgs);
+    else                 terminal->startProcess("/opt/cmssw/scripts/run_analysis_selup.sh", commandArgs);
+    if (terminal->didStartFail()) delete terminal;
+    else emit showTabSignal(terminal, "Run Analysis");
+  }
 }
 
 bool DBUpload::displayRunInfo() {
 
-    if (currentRun == "") {
-        btnUpload->setEnabled(false);
-        return false;
-    }
+  if (currentRun == "") {
+    btnUpload->setEnabled(false);
+    return false;
+  }
+  
+  fillSkipList();
+  
+  if (currentRun.toInt() == sistrip::MULTIPART) {
 
-    fillSkipList();
-
-    if (currentRun.toInt() == sistrip::MULTIPART) {
-
-        //chkVeto->setEnabled(false);
-
-        QStringList parts = currentPartition.split("*");
-        QVector<QRunId> runIds;       
+    //chkVeto->setEnabled(false);
+    
+    QStringList parts = currentPartition.split("*");
+    QVector<QRunId> runIds;       
  
-        if (parts.size() != 5) {
-            if(Debug::Inst()->getEnabled()) qDebug() << "Unable to deconstruct 4 partition names for multi-partition view\n";
-            btnUpload->setEnabled(false);
-            return false;
-        }
-
-        for (int i = 1; i < parts.size(); i++) {
-            QString part = parts.at(i);
-            QStringList subparts = part.split("#");
-            if (subparts.size() != 2) {
-                if(Debug::Inst()->getEnabled()) qDebug() << "Unable to deconstruct 4 partition names and run numbers for multi-partition view\n";
-                btnUpload->setEnabled(false);
-                return false;
-            }
-            runIds.push_back(QRunId(subparts[0], subparts[1]));
-        }
-
-        infoss << "<html>" << std::endl;
-        infoss << "<b>Multi-partition view : </b>" << "<br/><br/>";
-
-        if (parts.at(0) != "TIMING") {
-            btnUpload->setEnabled(false);
-        }
-
-        for (int i = 0; i < runIds.size(); i++) {
-            QString partition, modeDescription, creationDate, startTime, endTime;
-            QString fecMajor, fecMinor, fedMajor, fedMinor, connMajor, connMinor, dcuinfoMajor, dcuinfoMinor, dcumapMajor, dcumapMinor, maskMajor, maskMinor;
-            QString analMajor, analMinor;
-            
-            QString tablename = "viewallrun";
-            
-            std::stringstream queryss;
-            queryss << "select distinct ";
-            queryss << "partitionname, ";
-            queryss << "modedescription, ";
-            queryss << "to_char( starttime,'yyyy-mm-dd' ) as creationdate, ";
-            queryss << "to_char( starttime, 'hh24:mi:ss' ) as creationtime, ";
-            queryss << "to_char( endtime, 'hh24:mi:ss' ) as finishtime, ";
-            queryss << "fecversionmajorid, ";
-            queryss << "fecversionminorid, ";
-            queryss << "fedversionmajorid, ";
-            queryss << "fedversionminorid, ";
-            queryss << "connectionversionmajorid, ";
-            queryss << "connectionversionminorid, ";
-            queryss << "dcuinfoversionmajorid, ";
-            queryss << "dcuinfoversionminorid, ";
-            queryss << "dcupsumapversionmajorid, ";
-            queryss << "dcupsumapversionminorid, ";
-            queryss << "maskversionmajorid, ";
-            queryss << "maskversionminorid ";
-            queryss << "from ";
-            queryss <<  tablename.toStdString();
-            queryss << " where runnumber=" << qPrintable(runIds[i].second);
-        
-            QString myQuery(queryss.str().c_str());
-            QSqlQuery query(myQuery);
-            
-            while (query.next()) {
-                partition       = query.value(0).toString();
-                modeDescription = query.value(1).toString();
-                creationDate    = query.value(2).toString();
-                startTime       = query.value(3).toString();
-                endTime         = query.value(4).toString();
-                fecMajor        = query.value(5).toString();
-                fecMinor        = query.value(6).toString();
-                fedMajor        = query.value(7).toString();
-                fedMinor        = query.value(8).toString();
-                connMajor       = query.value(9).toString();
-                connMinor       = query.value(10).toString();
-                dcuinfoMajor    = query.value(11).toString();
-                dcuinfoMinor    = query.value(12).toString();
-                dcumapMajor     = query.value(13).toString();
-                dcumapMinor     = query.value(14).toString();
-                maskMajor       = query.value(15).toString();
-                maskMinor       = query.value(16).toString();
-            }
-
-            tablename = "analysis";
-            queryss.str("");
-            queryss << "select distinct ";
-            queryss << "versionmajorid, ";
-            queryss << "versionminorid ";
-            queryss << "from ";
-            queryss <<  tablename.toStdString();
-            queryss << " where analysisid = ( select max(analysisid) from analysis where runnumber = " << qPrintable(runIds[i].second) << ")";
-
-            myQuery = queryss.str().c_str();
-            QSqlQuery query2(myQuery);
-
-            while (query2.next()) {
-                analMajor       = query2.value(0).toString();
-                analMinor       = query2.value(1).toString();
-            }
-
-            QString pname = "";
-            QString pnameinfo = "";
-
-            if      (partition.startsWith("TI")) pnameinfo = "TIB/TID";
-            else if (partition.startsWith("TO")) pnameinfo = "TOB";
-            else if (partition.startsWith("TP")) pnameinfo = "TEC+";
-            else if (partition.startsWith("TM")) pnameinfo = "TEC-";
-
-            if      (partition.startsWith("TI")) pname = "PartTIBD";
-            else if (partition.startsWith("TO")) pname = "PartTOB";
-            else if (partition.startsWith("TP")) pname = "PartTECP";
-            else if (partition.startsWith("TM")) pname = "PartTECM";
-
-            infoss << "<b>DB parameters for " << qPrintable(pnameinfo) << "</b><br/>";
-            infoss << "Partition name : "  << qPrintable(partition)        << "<br/>";
-            infoss << "Run number : "      << qPrintable(runIds[i].second) << "<br/>";
-            infoss << "Cabling : "         << qPrintable(connMajor)        << "."   << qPrintable(connMinor)     << "<br/>";
-            infoss << "FEC : "             << qPrintable(fecMajor)         << "."   << qPrintable(fecMinor)      << "<br/>";
-            infoss << "FED : "             << qPrintable(fedMajor)         << "."   << qPrintable(fedMinor)      << "<br/>";
-            infoss << "DCU : "             << qPrintable(dcuinfoMajor)     << "."   << qPrintable(dcuinfoMinor)  << "<br/>";
-            infoss << "DCU PSU Map : "     << qPrintable(dcumapMajor)      << "."   << qPrintable(dcumapMinor)   << "<br/>";
-            infoss << "Mask : "            << qPrintable(maskMajor)        << "."   << qPrintable(maskMinor)     << "<br/>";
-            infoss << "Analysis : "        << qPrintable(analMajor)        << "."   << qPrintable(analMinor)     << "<br/>";
-            infoss << "<br/>";
-
-            partss << "\t" << qPrintable(pname) << " = cms.untracked.PSet("      << std::endl;
-            partss << "\t\tForceCurrentState = cms.untracked.bool(False)," << std::endl;
-            partss << "\t\tForceVersions = cms.untracked.bool(True),"      << std::endl;
-            partss << "\t\tPartitionName = cms.untracked.string(\'"        << qPrintable(partition)        << "\')," << std::endl;
-            partss << "\t\tRunNumber = cms.untracked.uint32("              << qPrintable(runIds[i].second) << "),"   << std::endl;
-            partss << "\t\tCablingVersion = cms.untracked.vuint32("        << qPrintable(connMajor)        << ", "   << qPrintable(connMinor)     << ")," << std::endl;
-            partss << "\t\tFecVersion = cms.untracked.vuint32("            << qPrintable(fecMajor)         << ", "   << qPrintable(fecMinor)      << ")," << std::endl;
-            partss << "\t\tFedVersion = cms.untracked.vuint32("            << qPrintable(fedMajor)         << ", "   << qPrintable(fedMinor)      << ")," << std::endl;
-            partss << "\t\tDcuDetIdsVersion = cms.untracked.vuint32("      << qPrintable(dcuinfoMajor)     << ", "   << qPrintable(dcuinfoMinor)  << ")," << std::endl;
-            partss << "\t\tDcuPsuMapVersion = cms.untracked.vuint32("      << qPrintable(dcumapMajor)      << ", "   << qPrintable(dcumapMinor)   << ")," << std::endl;
-            partss << "\t\tMaskVersion = cms.untracked.vuint32("           << qPrintable(maskMajor)        << ", "   << qPrintable(maskMinor)     << ")," << std::endl;
-            partss << "\t\tApvTimingVersion = cms.untracked.vuint32("      << qPrintable(analMajor)        << ", "   << qPrintable(analMinor)     << ")," << std::endl;
-            partss << "\t)," << std::endl;
-
-        }
-
-        infoss << "</html>" << std::endl;
-        QTextCursor cursor(txtCurRunInfo->textCursor());
-        cursor.insertHtml(infoss.str().c_str());
-
-        return true;
-
+    if (parts.size() != 5) {
+      if(Debug::Inst()->getEnabled()) qDebug() << "Unable to deconstruct 4 partition names for multi-partition view\n";
+      btnUpload->setEnabled(false);
+      return false;
     }
 
-    else {
-
-        //btnUpload->setEnabled(false);
- 
-        QString partition, modeDescription, creationDate, startTime, endTime, o2o;
-        QString fecMajor, fecMinor, fedMajor, fedMinor, connMajor, connMinor, dcuinfoMajor, dcuinfoMinor, dcumapMajor, dcumapMinor, maskMajor, maskMinor, analysisid;
-        QString cpsetpoint;
-        
-        QString tablename = "viewallrun";
-        
-        std::stringstream queryss;
-        queryss << "select distinct ";
-        queryss << "partitionname, ";
-        queryss << "modedescription, ";
-        queryss << "to_char( starttime,'yyyy-mm-dd' ) as creationdate, ";
-        queryss << "to_char( starttime, 'hh24:mi:ss' ) as creationtime, ";
-        queryss << "to_char( endtime, 'hh24:mi:ss' ) as finishtime, ";
-        queryss << "fecversionmajorid, ";
-        queryss << "fecversionminorid, ";
-        queryss << "fedversionmajorid, ";
-        queryss << "fedversionminorid, ";
-        queryss << "connectionversionmajorid, ";
-        queryss << "connectionversionminorid, ";
-        queryss << "dcuinfoversionmajorid, ";
-        queryss << "dcuinfoversionminorid, ";
-        queryss << "dcupsumapversionmajorid, ";
-        queryss << "dcupsumapversionminorid, ";
-        queryss << "maskversionmajorid, ";
-        queryss << "maskversionminorid, ";
-        queryss << "analysisversionid ";
-        queryss << "from ";
-        queryss <<  tablename.toStdString();
-        queryss << " where runnumber=" << qPrintable(currentRun);
-        
-        QString myQuery(queryss.str().c_str());
-        QSqlQuery query(myQuery);
-        
-        while (query.next()) {
-            partition       = query.value(0).toString();
-            modeDescription = query.value(1).toString();
-            creationDate    = query.value(2).toString();
-            startTime       = query.value(3).toString();
-            endTime         = query.value(4).toString();
-            fecMajor        = query.value(5).toString();
-            fecMinor        = query.value(6).toString();
-            fedMajor        = query.value(7).toString();
-            fedMinor        = query.value(8).toString();
-            connMajor       = query.value(9).toString();
-            connMinor       = query.value(10).toString();
-            dcuinfoMajor    = query.value(11).toString();
-            dcuinfoMinor    = query.value(12).toString();
-            dcumapMajor     = query.value(13).toString();
-            dcumapMinor     = query.value(14).toString();
-            maskMajor       = query.value(15).toString();
-            maskMinor       = query.value(16).toString();
-            analysisid      = query.value(17).toString();
-        }
-        
-        analysisType = modeDescription;
-
-        std::stringstream infoss;
-        infoss << "<html>" << std::endl;
-        infoss << "<p>" << std::endl;
-        infoss << "<b>About the run:</b>" << "<br/>";
-        infoss << "Run Number : "         << qPrintable(currentRun)      << " (" << qPrintable(modeDescription) << ") <br/>";
-        infoss << "Partition          : " << qPrintable(partition)       << "<br/>";
-        infoss << "Created On    : "      << qPrintable(creationDate)    << " during " << qPrintable(startTime) << " to " << qPrintable(endTime) << "<br/>";
-        infoss << std::endl;
-        infoss << "</p>" << std::endl;
-        
-        infoss << "<b>DB Versions:" << "</b>" << "<br/>";
-        
-        QTextCursor cursor(txtCurRunInfo->textCursor());
-        cursor.insertHtml(infoss.str().c_str());
-        
-        cursor.insertTable(6,2);
-        cursor.insertText("FEC");
-        cursor.movePosition(QTextCursor::NextCell);
-        cursor.insertText(fecMajor+"."+fecMinor);
-        cursor.movePosition(QTextCursor::NextCell);
-        cursor.insertText("FED");
-        cursor.movePosition(QTextCursor::NextCell);
-        cursor.insertText(fedMajor+"."+fedMinor);
-        cursor.movePosition(QTextCursor::NextCell);
-        cursor.insertText("CONN");
-        cursor.movePosition(QTextCursor::NextCell);
-        cursor.insertText(connMajor+"."+connMinor);
-        cursor.movePosition(QTextCursor::NextCell);
-        cursor.insertText("DCU  INFO");
-        cursor.movePosition(QTextCursor::NextCell);
-        cursor.insertText(dcuinfoMajor+"."+dcuinfoMinor);
-        cursor.movePosition(QTextCursor::NextCell);
-        cursor.insertText("DCU-PSU MAP");
-        cursor.movePosition(QTextCursor::NextCell);
-        cursor.insertText(dcumapMajor+"."+dcumapMinor);
-        cursor.movePosition(QTextCursor::NextCell);
-        cursor.insertText("MASK");
-        cursor.movePosition(QTextCursor::NextCell);
-        cursor.insertText(maskMajor+"."+maskMinor);
-        cursor.movePosition(QTextCursor::NextCell);
-        
-        std::stringstream info2ss;
-        info2ss << "</html>" << std::endl;
-        cursor.movePosition(QTextCursor::End);
-        cursor.insertHtml(info2ss.str().c_str());
-
-        return true;
+    for (int i = 1; i < parts.size(); i++) {
+      QString part = parts.at(i);
+      QStringList subparts = part.split("#");
+      if (subparts.size() != 2) {
+	if(Debug::Inst()->getEnabled()) qDebug() << "Unable to deconstruct 4 partition names and run numbers for multi-partition view\n";
+	btnUpload->setEnabled(false);
+	return false;
+      }
+      runIds.push_back(QRunId(subparts[0], subparts[1]));
     }
+    
+    infoss << "<html>" << std::endl;
+    infoss << "<b>Multi-partition view : </b>" << "<br/><br/>";
+    
+    if (parts.at(0) != "TIMING") {
+      btnUpload->setEnabled(false);
+    }
+    
+    for (int i = 0; i < runIds.size(); i++) {
+      QString partition, modeDescription, creationDate, startTime, endTime;
+      QString fecMajor, fecMinor, fedMajor, fedMinor, connMajor, connMinor, dcuinfoMajor, dcuinfoMinor, dcumapMajor, dcumapMinor, maskMajor, maskMinor;
+      QString analMajor, analMinor;
+      
+      QString tablename = "viewallrun";
+      
+      std::stringstream queryss;
+      queryss << "select distinct ";
+      queryss << "partitionname, ";
+      queryss << "modedescription, ";
+      queryss << "to_char( starttime,'yyyy-mm-dd' ) as creationdate, ";
+      queryss << "to_char( starttime, 'hh24:mi:ss' ) as creationtime, ";
+      queryss << "to_char( endtime, 'hh24:mi:ss' ) as finishtime, ";
+      queryss << "fecversionmajorid, ";
+      queryss << "fecversionminorid, ";
+      queryss << "fedversionmajorid, ";
+      queryss << "fedversionminorid, ";
+      queryss << "connectionversionmajorid, ";
+      queryss << "connectionversionminorid, ";
+      queryss << "dcuinfoversionmajorid, ";
+      queryss << "dcuinfoversionminorid, ";
+      queryss << "dcupsumapversionmajorid, ";
+      queryss << "dcupsumapversionminorid, ";
+      queryss << "maskversionmajorid, ";
+      queryss << "maskversionminorid ";
+      queryss << "from ";
+      queryss <<  tablename.toStdString();
+      queryss << " where runnumber=" << qPrintable(runIds[i].second);
+      
+      QString myQuery(queryss.str().c_str());
+      QSqlQuery query(myQuery);
+      
+      while (query.next()) {
+	partition       = query.value(0).toString();
+	modeDescription = query.value(1).toString();
+	creationDate    = query.value(2).toString();
+	startTime       = query.value(3).toString();
+	endTime         = query.value(4).toString();
+	fecMajor        = query.value(5).toString();
+	fecMinor        = query.value(6).toString();
+	fedMajor        = query.value(7).toString();
+	fedMinor        = query.value(8).toString();
+	connMajor       = query.value(9).toString();
+	connMinor       = query.value(10).toString();
+	dcuinfoMajor    = query.value(11).toString();
+	dcuinfoMinor    = query.value(12).toString();
+	dcumapMajor     = query.value(13).toString();
+	dcumapMinor     = query.value(14).toString();
+	maskMajor       = query.value(15).toString();
+	maskMinor       = query.value(16).toString();
+      }
+      
+      tablename = "analysis";
+      queryss.str("");
+      queryss << "select distinct ";
+      queryss << "versionmajorid, ";
+      queryss << "versionminorid ";
+      queryss << "from ";
+      queryss <<  tablename.toStdString();
+      queryss << " where analysisid = ( select max(analysisid) from analysis where runnumber = " << qPrintable(runIds[i].second) << ")";
+      
+      myQuery = queryss.str().c_str();
+      QSqlQuery query2(myQuery);
+      
+      while (query2.next()) {
+	analMajor       = query2.value(0).toString();
+	analMinor       = query2.value(1).toString();
+      }
+      
+      QString pname = "";
+      QString pnameinfo = "";
+
+      if      (partition.startsWith("TI")) pnameinfo = "TIB/TID";
+      else if (partition.startsWith("TO")) pnameinfo = "TOB";
+      else if (partition.startsWith("TP")) pnameinfo = "TEC+";
+      else if (partition.startsWith("TM")) pnameinfo = "TEC-";
+      
+      if      (partition.startsWith("TI")) pname = "PartTIBD";
+      else if (partition.startsWith("TO")) pname = "PartTOB";
+      else if (partition.startsWith("TP")) pname = "PartTECP";
+      else if (partition.startsWith("TM")) pname = "PartTECM";
+      
+      infoss << "<b>DB parameters for " << qPrintable(pnameinfo) << "</b><br/>";
+      infoss << "Partition name : "  << qPrintable(partition)        << "<br/>";
+      infoss << "Run number : "      << qPrintable(runIds[i].second) << "<br/>";
+      infoss << "Cabling : "         << qPrintable(connMajor)        << "."   << qPrintable(connMinor)     << "<br/>";
+      infoss << "FEC : "             << qPrintable(fecMajor)         << "."   << qPrintable(fecMinor)      << "<br/>";
+      infoss << "FED : "             << qPrintable(fedMajor)         << "."   << qPrintable(fedMinor)      << "<br/>";
+      infoss << "DCU : "             << qPrintable(dcuinfoMajor)     << "."   << qPrintable(dcuinfoMinor)  << "<br/>";
+      infoss << "DCU PSU Map : "     << qPrintable(dcumapMajor)      << "."   << qPrintable(dcumapMinor)   << "<br/>";
+      infoss << "Mask : "            << qPrintable(maskMajor)        << "."   << qPrintable(maskMinor)     << "<br/>";
+      infoss << "Analysis : "        << qPrintable(analMajor)        << "."   << qPrintable(analMinor)     << "<br/>";
+      infoss << "<br/>";
+	    
+      partss << "\t" << qPrintable(pname) << " = cms.untracked.PSet("      << std::endl;
+      partss << "\t\tForceCurrentState = cms.untracked.bool(False)," << std::endl;
+      partss << "\t\tForceVersions = cms.untracked.bool(True),"      << std::endl;
+      partss << "\t\tPartitionName = cms.untracked.string(\'"        << qPrintable(partition)        << "\')," << std::endl;
+      partss << "\t\tRunNumber = cms.untracked.uint32("              << qPrintable(runIds[i].second) << "),"   << std::endl;
+      partss << "\t\tCablingVersion = cms.untracked.vuint32("        << qPrintable(connMajor)        << ", "   << qPrintable(connMinor)     << ")," << std::endl;
+      partss << "\t\tFecVersion = cms.untracked.vuint32("            << qPrintable(fecMajor)         << ", "   << qPrintable(fecMinor)      << ")," << std::endl;
+      partss << "\t\tFedVersion = cms.untracked.vuint32("            << qPrintable(fedMajor)         << ", "   << qPrintable(fedMinor)      << ")," << std::endl;
+      partss << "\t\tDcuDetIdsVersion = cms.untracked.vuint32("      << qPrintable(dcuinfoMajor)     << ", "   << qPrintable(dcuinfoMinor)  << ")," << std::endl;
+      partss << "\t\tDcuPsuMapVersion = cms.untracked.vuint32("      << qPrintable(dcumapMajor)      << ", "   << qPrintable(dcumapMinor)   << ")," << std::endl;
+      partss << "\t\tMaskVersion = cms.untracked.vuint32("           << qPrintable(maskMajor)        << ", "   << qPrintable(maskMinor)     << ")," << std::endl;
+      partss << "\t\tApvTimingVersion = cms.untracked.vuint32("      << qPrintable(analMajor)        << ", "   << qPrintable(analMinor)     << ")," << std::endl;
+      partss << "\t)," << std::endl;
+      
+    }
+
+    infoss << "</html>" << std::endl;
+    QTextCursor cursor(txtCurRunInfo->textCursor());
+    cursor.insertHtml(infoss.str().c_str());
+    
+    return true;
+    
+  }
+
+  else {
+    
+    //btnUpload->setEnabled(false);
+    
+    QString partition, modeDescription, creationDate, startTime, endTime, o2o;
+    QString fecMajor, fecMinor, fedMajor, fedMinor, connMajor, connMinor, dcuinfoMajor, dcuinfoMinor, dcumapMajor, dcumapMinor, maskMajor, maskMinor, analysisid;
+    QString cpsetpoint;
+    
+    QString tablename = "viewallrun";
+    
+    std::stringstream queryss;
+    queryss << "select distinct ";
+    queryss << "partitionname, ";
+    queryss << "modedescription, ";
+    queryss << "to_char( starttime,'yyyy-mm-dd' ) as creationdate, ";
+    queryss << "to_char( starttime, 'hh24:mi:ss' ) as creationtime, ";
+    queryss << "to_char( endtime, 'hh24:mi:ss' ) as finishtime, ";
+    queryss << "fecversionmajorid, ";
+    queryss << "fecversionminorid, ";
+    queryss << "fedversionmajorid, ";
+    queryss << "fedversionminorid, ";
+    queryss << "connectionversionmajorid, ";
+    queryss << "connectionversionminorid, ";
+    queryss << "dcuinfoversionmajorid, ";
+    queryss << "dcuinfoversionminorid, ";
+    queryss << "dcupsumapversionmajorid, ";
+    queryss << "dcupsumapversionminorid, ";
+    queryss << "maskversionmajorid, ";
+    queryss << "maskversionminorid, ";
+    queryss << "analysisversionid ";
+    queryss << "from ";
+    queryss <<  tablename.toStdString();
+    queryss << " where runnumber=" << qPrintable(currentRun);
+        
+    QString myQuery(queryss.str().c_str());
+    QSqlQuery query(myQuery);
+    
+    while (query.next()) {
+      partition       = query.value(0).toString();
+      modeDescription = query.value(1).toString();
+      creationDate    = query.value(2).toString();
+      startTime       = query.value(3).toString();
+      endTime         = query.value(4).toString();
+      fecMajor        = query.value(5).toString();
+      fecMinor        = query.value(6).toString();
+      fedMajor        = query.value(7).toString();
+      fedMinor        = query.value(8).toString();
+      connMajor       = query.value(9).toString();
+      connMinor       = query.value(10).toString();
+      dcuinfoMajor    = query.value(11).toString();
+      dcuinfoMinor    = query.value(12).toString();
+      dcumapMajor     = query.value(13).toString();
+      dcumapMinor     = query.value(14).toString();
+      maskMajor       = query.value(15).toString();
+      maskMinor       = query.value(16).toString();
+      analysisid      = query.value(17).toString();
+    }
+    
+    analysisType = modeDescription;
+    
+    std::stringstream infoss;
+    infoss << "<html>" << std::endl;
+    infoss << "<p>" << std::endl;
+    infoss << "<b>About the run:</b>" << "<br/>";
+    infoss << "Run Number : "         << qPrintable(currentRun)      << " (" << qPrintable(modeDescription) << ") <br/>";
+    infoss << "Partition          : " << qPrintable(partition)       << "<br/>";
+    infoss << "Created On    : "      << qPrintable(creationDate)    << " during " << qPrintable(startTime) << " to " << qPrintable(endTime) << "<br/>";
+    infoss << std::endl;
+    infoss << "</p>" << std::endl;
+    
+    infoss << "<b>DB Versions:" << "</b>" << "<br/>";
+    
+    QTextCursor cursor(txtCurRunInfo->textCursor());
+    cursor.insertHtml(infoss.str().c_str());
+        
+    cursor.insertTable(6,2);
+    cursor.insertText("FEC");
+    cursor.movePosition(QTextCursor::NextCell);
+    cursor.insertText(fecMajor+"."+fecMinor);
+    cursor.movePosition(QTextCursor::NextCell);
+    cursor.insertText("FED");
+    cursor.movePosition(QTextCursor::NextCell);
+    cursor.insertText(fedMajor+"."+fedMinor);
+    cursor.movePosition(QTextCursor::NextCell);
+    cursor.insertText("CONN");
+    cursor.movePosition(QTextCursor::NextCell);
+    cursor.insertText(connMajor+"."+connMinor);
+    cursor.movePosition(QTextCursor::NextCell);
+    cursor.insertText("DCU  INFO");
+    cursor.movePosition(QTextCursor::NextCell);
+    cursor.insertText(dcuinfoMajor+"."+dcuinfoMinor);
+    cursor.movePosition(QTextCursor::NextCell);
+    cursor.insertText("DCU-PSU MAP");
+    cursor.movePosition(QTextCursor::NextCell);
+    cursor.insertText(dcumapMajor+"."+dcumapMinor);
+    cursor.movePosition(QTextCursor::NextCell);
+    cursor.insertText("MASK");
+    cursor.movePosition(QTextCursor::NextCell);
+    cursor.insertText(maskMajor+"."+maskMinor);
+    cursor.movePosition(QTextCursor::NextCell);
+    
+    std::stringstream info2ss;
+    info2ss << "</html>" << std::endl;
+    cursor.movePosition(QTextCursor::End);
+    cursor.insertHtml(info2ss.str().c_str());
+
+    return true;
+  }
 }
 

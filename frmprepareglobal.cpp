@@ -18,7 +18,7 @@
 #define TECM_ID "TEC-"
 #define O2O_ID "O2O"
 
-#define PREPAREGLOBAL_SCRIPT "/nfshome0/trackerpro/o2o/scripts/prepareGlobal_slc5.sh"
+#define PREPAREGLOBAL_SCRIPT "/nfshome0/trackerpro/o2o/scripts/prepareGlobal_90X.sh"
 
 #define SELECTPARTNAMES "select partitionname, max(o2oid) as o2oid from partition, StateHistory, CurrentState, O2OPartition where StateHistory.partitionid=Partition.partitionId and StateHistory.stateHistoryId=CurrentState.stateHistoryId and Partition.partitionId = O2OPartition.partitionid and SUBDETECTOR = '%1' group by partitionname order by O2OID asc"
 
@@ -566,78 +566,78 @@ QStringList PrepareGlobal::getUsedPartitionNames(QString subDetector, bool& used
 
 
 int PrepareGlobal::xCheckPartition( QString partitionName , QString subDetector) {
-    int result=RESULT_UNKNOWN;
-    
-    if (DbConnection::Inst()->dbConnected()) {
-        if (partitionName==NONE_STRING) {
-        	QString myQuery;
-        	myQuery = QString(SELECTXCHECKNONE).arg(subDetector);
-            QSqlQuery query(myQuery);
-        	int resultCounter = 0;
-        	while (query.next()) {
-        	int partition = query.value(0).toInt();
-        	if (partition==0) {
-        	    result=RESULT_OK;
-        	} else {
-        	    result=RESULT_ERROR;
-        	}
-        	resultCounter++;
-        	}
-        	if (resultCounter!=1) {
-        	    if(Debug::Inst()->getEnabled()) qDebug()  << "ERROR: in PrepareGlobal::xCheckPartition I found more than one answer to the SELECT query\n";
-        	    result=RESULT_UNKNOWN;
-        	}
-        
-        } 
-        else if ((partitionName==O2O_ID)&&(subDetector==O2O_ID)) {
-            QString myQuery;
-            myQuery = QString(SELECTXCHECKO2O).arg(subDetector);
-            QSqlQuery query(myQuery);
-            bool rset = query.exec();
-            int resultCounter = 0;
-            if (rset) {
-                while (query.next()) {
-                int partition = query.value(0).toInt();
-                if (partition==1) {
-                    result=RESULT_OK;
-                } else {
-                    result=RESULT_ERROR;
-                }
-                resultCounter++;
-                }
-            
-            }
-            if (resultCounter!=1) {
-                if(Debug::Inst()->getEnabled()) qDebug() << "ERROR: in PrepareGlobal::xCheckPartition I found more than one answer to the SELECT query\n";
-                result=RESULT_UNKNOWN;
-            }
-        } 
-        else { 
-        	QString myQuery;
-        	myQuery = QString(SELECTXCHECK).arg(partitionName);
-            QSqlQuery query(myQuery);
-        	int resultCounter = 0;
-        	while (query.next()) {
-        	int partition = query.value(0).toInt();
-        	if (partition==1) {
-        	    result=RESULT_OK;
-        	} else {
-        	    result=RESULT_ERROR;
-        	}
-        	resultCounter++;
-        	}
-        	if (resultCounter!=1) {
-        	    if(Debug::Inst()->getEnabled()) qDebug() << "ERROR: in PrepareGlobal::xCheckPartition I found more than one answer to the SELECT query\n";
-        	    result=RESULT_UNKNOWN;
-        	}
-        }
+
+  int result=RESULT_UNKNOWN;  
+  if (DbConnection::Inst()->dbConnected()) {
+    if (partitionName==NONE_STRING) {
+      QString myQuery;
+      myQuery = QString(SELECTXCHECKNONE).arg(subDetector);
+      QSqlQuery query(myQuery);
+      int resultCounter = 0;
+      while (query.next()) {
+	int partition = query.value(0).toInt();
+	if (partition==0) {
+	  result=RESULT_OK;
+	} else {
+	  result=RESULT_ERROR;
+	}
+	resultCounter++;
+      }
+      if (resultCounter!=1) {
+	if(Debug::Inst()->getEnabled()) qDebug()  << "ERROR: in PrepareGlobal::xCheckPartition I found more than one answer to the SELECT query\n";
+	result=RESULT_UNKNOWN;
+      }
+      
     } 
-    else {
-        if(Debug::Inst()->getEnabled()) qDebug() << "ERROR: dbConnection is NULL in PrepareGlobal::xCheckPartition\n";
-        result=RESULT_UNKNOWN;
+    else if ((partitionName==O2O_ID)&&(subDetector==O2O_ID)) {
+      QString myQuery;
+      myQuery = QString(SELECTXCHECKO2O).arg(subDetector);
+      QSqlQuery query(myQuery);
+      bool rset = query.exec();
+      int resultCounter = 0;
+      if (rset) {
+	while (query.next()) {
+	  int partition = query.value(0).toInt();
+	  if (partition==1) {
+	    result=RESULT_OK;
+	  } else {
+	    result=RESULT_ERROR;
+	  }
+	  resultCounter++;
+	}
+            
+      }
+      if (resultCounter!=1) {
+	if(Debug::Inst()->getEnabled()) qDebug() << "ERROR: in PrepareGlobal::xCheckPartition I found more than one answer to the SELECT query\n";
+	result=RESULT_UNKNOWN;
+      }
+    } 
+    else { 
+      QString myQuery;
+      myQuery = QString(SELECTXCHECK).arg(partitionName);
+      QSqlQuery query(myQuery);
+      int resultCounter = 0;
+      while (query.next()) {
+	int partition = query.value(0).toInt();
+	if (partition==1) {
+	  result=RESULT_OK;
+	} else {
+	  result=RESULT_ERROR;
+	}
+	resultCounter++;
+      }
+      if (resultCounter!=1) {
+	if(Debug::Inst()->getEnabled()) qDebug() << "ERROR: in PrepareGlobal::xCheckPartition I found more than one answer to the SELECT query\n";
+	result=RESULT_UNKNOWN;
+      }
     }
-    
-    return result;
+  } 
+  else {
+    if(Debug::Inst()->getEnabled()) qDebug() << "ERROR: dbConnection is NULL in PrepareGlobal::xCheckPartition\n";
+    result=RESULT_UNKNOWN;
+  }
+  
+  return result;
 }
 
 int PrepareGlobal::checkVersions() {
@@ -645,101 +645,103 @@ int PrepareGlobal::checkVersions() {
 }
 
 int PrepareGlobal::checkVersions( bool checkO2O ){
-    QString icon_name;
-    int tibr, tobr, tecpr, tecmr, runnr, o2or;
-    int nextRunNumber;
-    int lastIovRunNumber;
-    int resultState=RESULT_UNKNOWN;
-    bool allowO2O = true;
-    
-    tibr = xCheckPartition(cmbTib->currentText(), TIB_ID);
-    //std::cout << "tibr: " << tibr << std::endl; // debug
-    tobr = xCheckPartition(cmbTob->currentText(), TOB_ID);
-    //std::cout << "tobr: " << tobr << std::endl; // debug
-    tecpr = xCheckPartition(cmbTecp->currentText(), TECP_ID);
-    //std::cout << "tecpr: " << tecpr << std::endl; // debug   
-    tecmr = xCheckPartition(cmbTecm->currentText(), TECM_ID);
-    //std::cout << "tecmr: " << tecmr << std::endl; // debug   
-    runnr=getRunNumbers(nextRunNumber, lastIovRunNumber);
-    //std::cout << "runnr: " << runnr << std::endl; // debug 
-    if (checkO2O) {
-	o2or = xCheckPartition(O2O_ID, O2O_ID);
-	if ((o2or==RESULT_OK)&&(nextRunNumber==lastIovRunNumber)) {
-	    allowO2O = false;
-	}
-    } else {
-	o2or = RESULT_UNKNOWN;
-    }
-    
-    // DEBUG
-    //o2or = RESULT_OK;
-    // END DEBUG
-    
-    if ((tibr==RESULT_OK)&&
-	(tobr==RESULT_OK)&&
-	(tecpr==RESULT_OK)&&
-	(tecmr==RESULT_OK)&&
-	(o2or==RESULT_OK)) {
-	resultState=RESULT_OK;
-    }
-    
-    if ((tibr==RESULT_ERROR)||
-	(tobr==RESULT_ERROR)||
-	(tecpr==RESULT_ERROR)||
-	(tecmr==RESULT_ERROR)||
-	(o2or==RESULT_ERROR)){
-	resultState=RESULT_ERROR;
-    }
-    
-    if ((tibr==RESULT_UNKNOWN) ||
-	(tobr==RESULT_UNKNOWN) ||
-	(tecpr==RESULT_UNKNOWN)||
-	(tecmr==RESULT_UNKNOWN)||
-	(runnr==RESULT_UNKNOWN)||
-	(o2or==RESULT_UNKNOWN)){
-	resultState=RESULT_UNKNOWN;
-    }
-    
-    if ((tibr==RESULT_OK)&&
-	(tobr==RESULT_OK)&&
-	(tecpr==RESULT_OK)&&
-	(tecmr==RESULT_OK)&&
-	(o2or==RESULT_UNKNOWN)) {
-      resultState=RESULT_ALMOST_OK;
-    }
 
-    // TODO: update the partition names if resultState==RESULT_OK
-    displayStatus(resultState, nextRunNumber, lastIovRunNumber, allowO2O);
+  QString icon_name;
+  int tibr, tobr, tecpr, tecmr, runnr, o2or;
+  int nextRunNumber;
+  int lastIovRunNumber;
+  int resultState=RESULT_UNKNOWN;
+  bool allowO2O = true;
+  
+  tibr = xCheckPartition(cmbTib->currentText(), TIB_ID);
+  //std::cout << "tibr: " << tibr << std::endl; // debug
+  tobr = xCheckPartition(cmbTob->currentText(), TOB_ID);
+  //std::cout << "tobr: " << tobr << std::endl; // debug
+  tecpr = xCheckPartition(cmbTecp->currentText(), TECP_ID);
+  //std::cout << "tecpr: " << tecpr << std::endl; // debug   
+  tecmr = xCheckPartition(cmbTecm->currentText(), TECM_ID);
+  //std::cout << "tecmr: " << tecmr << std::endl; // debug   
+  runnr=getRunNumbers(nextRunNumber, lastIovRunNumber);
+  //std::cout << "runnr: " << runnr << std::endl; // debug 
+  if (checkO2O) {
+    o2or = xCheckPartition(O2O_ID, O2O_ID);
+    if ((o2or==RESULT_OK)&&(nextRunNumber==lastIovRunNumber)) {
+      allowO2O = false;
+    }
+  } else {
+    o2or = RESULT_UNKNOWN;
+  }
+  
+  // DEBUG
+  //o2or = RESULT_OK;
+  // END DEBUG
     
-    return resultState;
+  if ((tibr==RESULT_OK)&&
+      (tobr==RESULT_OK)&&
+      (tecpr==RESULT_OK)&&
+      (tecmr==RESULT_OK)&&
+      (o2or==RESULT_OK)) {
+    resultState=RESULT_OK;
+  }
+  
+  if ((tibr==RESULT_ERROR)||
+      (tobr==RESULT_ERROR)||
+      (tecpr==RESULT_ERROR)||
+      (tecmr==RESULT_ERROR)||
+      (o2or==RESULT_ERROR)){
+    resultState=RESULT_ERROR;
+  }
+  
+  if ((tibr==RESULT_UNKNOWN) ||
+      (tobr==RESULT_UNKNOWN) ||
+      (tecpr==RESULT_UNKNOWN)||
+      (tecmr==RESULT_UNKNOWN)||
+      (runnr==RESULT_UNKNOWN)||
+      (o2or==RESULT_UNKNOWN)){
+    resultState=RESULT_UNKNOWN;
+  }
+    
+  if ((tibr==RESULT_OK)&&
+      (tobr==RESULT_OK)&&
+      (tecpr==RESULT_OK)&&
+      (tecmr==RESULT_OK)&&
+      (o2or==RESULT_UNKNOWN)) {
+    resultState=RESULT_ALMOST_OK;
+  }
+  
+  // TODO: update the partition names if resultState==RESULT_OK
+  displayStatus(resultState, nextRunNumber, lastIovRunNumber, allowO2O);
+  
+  return resultState;
 }
 
 
 int PrepareGlobal::getRunNumbers ( int &nextRunNumber, int &lastIovRunNumber ) {
-    int result=RESULT_UNKNOWN;
+  
+  int result=RESULT_UNKNOWN;
+  
+  nextRunNumber = -1;
+  lastIovRunNumber = -1;
+  
+  if (DbConnection::Inst()->dbConnected()) {
+    QString myQuery;
+    myQuery = QString(SELECTNEXTRUNNUMBER);
+    QSqlQuery query(myQuery);
+    int resultCounter = 0;
+    while (query.next()) {
+      nextRunNumber    = query.value(0).toInt();
+      lastIovRunNumber = query.value(1).toInt();
+      resultCounter++;
+    }
+    if (resultCounter==1) result=RESULT_OK;
+    else {
+      if(Debug::Inst()->getEnabled()) qDebug() << "ERROR: in PrepareGlobal::getRunNumbers I found more that one answer to the SELECT query\n";
+      result=RESULT_UNKNOWN;
+    }
     
-    nextRunNumber = -1;
-    lastIovRunNumber = -1;
-    
-    if (DbConnection::Inst()->dbConnected()) {
-	    QString myQuery;
-	    myQuery = QString(SELECTNEXTRUNNUMBER);
-        QSqlQuery query(myQuery);
-	    int resultCounter = 0;
-		while (query.next()) {
-		    nextRunNumber    = query.value(0).toInt();
-		    lastIovRunNumber = query.value(1).toInt();
-		    resultCounter++;
-		}
-	    if (resultCounter==1) result=RESULT_OK;
-	    else {
-		    if(Debug::Inst()->getEnabled()) qDebug() << "ERROR: in PrepareGlobal::getRunNumbers I found more that one answer to the SELECT query\n";
-		    result=RESULT_UNKNOWN;
-	    }
-	    
-    } 
-    else if(Debug::Inst()->getEnabled()) qDebug() << "ERROR dbConnection is NULL in PrepareGlobal::getRunNumbers\n";
-    return result; 
+  } 
+  else if(Debug::Inst()->getEnabled()) qDebug() << "ERROR dbConnection is NULL in PrepareGlobal::getRunNumbers\n";
+  return result; 
 }
     
 void PrepareGlobal::cacheOldConfiguration() {
@@ -782,60 +784,61 @@ void PrepareGlobal::setAllToReadout(int readoutMode)
 }
 
 bool PrepareGlobal::preparePartitionState(QString partitionName, QString subDetector, int nextRunNumber) {
-    bool result = false;
-    if (DbConnection::Inst()->dbConnected()) {
-        int existingEntries=99;
-        QString myQuery;
-        myQuery = QString(SELECTCHECKDUPLICATE).arg(partitionName).arg(nextRunNumber);
-        QSqlQuery query(myQuery);
-	    bool rset = query.exec();
-	    if (rset) {
-		    query.next();
-            existingEntries = query.value(0).toInt();
-            if (existingEntries>0) {
-                // std::cerr << "There is already " << existingEntries << " entry with the same properties. Skipping the insertion" << std::endl; // debug
-                result = true;
-            }
-            if (existingEntries>1) {
-                if(Debug::Inst()->getEnabled()) qDebug()  << "ERROR: There are nore than 1 partition with the same state (" << existingEntries << "): either the check is wrong or the database is corrupted.\n";
-            }
-        } 
-        else {
-            if(Debug::Inst()->getEnabled()) qDebug()  << "Could not count existing entries in o2opartition table. Skipping insertion\n"; // error message
-            existingEntries = 99;
-            result = false;
-        }
-        
-        if (existingEntries==0) {
-            myQuery = QString(EXECINSERTOPERATION).arg(partitionName).arg(subDetector).arg(nextRunNumber);
-            QSqlQuery query2(myQuery);
-            query2.exec();
-            DbConnection::Inst()->dbConnection().commit();
-            result=true;
-        }
+
+  bool result = false;
+  if (DbConnection::Inst()->dbConnected()) {
+    int existingEntries=99;
+    QString myQuery;
+    myQuery = QString(SELECTCHECKDUPLICATE).arg(partitionName).arg(nextRunNumber);
+    QSqlQuery query(myQuery);
+    bool rset = query.exec();
+    if (rset) {
+      query.next();
+      existingEntries = query.value(0).toInt();
+      if (existingEntries>0) {
+	// std::cerr << "There is already " << existingEntries << " entry with the same properties. Skipping the insertion" << std::endl; // debug
+	result = true;
+      }
+      if (existingEntries>1) {
+	if(Debug::Inst()->getEnabled()) qDebug()  << "ERROR: There are nore than 1 partition with the same state (" << existingEntries << "): either the check is wrong or the database is corrupted.\n";
+      }
     } 
     else {
-	    if(Debug::Inst()->getEnabled()) qDebug()  << "ERROR dbConnection is NULL in PrepareGlobal::preparePartitionState\n";
+      if(Debug::Inst()->getEnabled()) qDebug()  << "Could not count existing entries in o2opartition table. Skipping insertion\n"; // error message
+      existingEntries = 99;
+      result = false;
     }
-    return result;
+    
+    if (existingEntries==0) {
+      myQuery = QString(EXECINSERTOPERATION).arg(partitionName).arg(subDetector).arg(nextRunNumber);
+      QSqlQuery query2(myQuery);
+      query2.exec();
+      DbConnection::Inst()->dbConnection().commit();
+      result=true;
+    }
+  } 
+  else {
+    if(Debug::Inst()->getEnabled()) qDebug()  << "ERROR dbConnection is NULL in PrepareGlobal::preparePartitionState\n";
+  }
+  return result;
 }
 
 bool PrepareGlobal::confirmO2O(int nextRunNumber) {
-    bool result = false;
-    if (DbConnection::Inst()->dbConnected()) {
-	    QString myQuery;
-	    // TODO: check if the o2o was already confirmed
-	    myQuery = QString(EXECCONFIRMO2O).arg(nextRunNumber);
-	    // std::cerr << myQuery.latin1() << std::endl; // debug
-	    QSqlQuery query(myQuery);
-        query.exec();
-	    DbConnection::Inst()->dbConnection().commit();
-	    result=true;
-    } 
-    else {
-	    if(Debug::Inst()->getEnabled()) qDebug()  << "ERROR dbConnection is NULL in PrepareGlobal::confirmO2O\n";
-    }
-    return result;
+  bool result = false;
+  if (DbConnection::Inst()->dbConnected()) {
+    QString myQuery;
+    // TODO: check if the o2o was already confirmed
+    myQuery = QString(EXECCONFIRMO2O).arg(nextRunNumber);
+    // std::cerr << myQuery.latin1() << std::endl; // debug
+    QSqlQuery query(myQuery);
+    query.exec();
+    DbConnection::Inst()->dbConnection().commit();
+    result=true;
+  } 
+  else {
+    if(Debug::Inst()->getEnabled()) qDebug()  << "ERROR dbConnection is NULL in PrepareGlobal::confirmO2O\n";
+  }
+  return result;
 }
 
 QString PrepareGlobal::createCfgLines(QString subDetectorShort, QString partitionName,
@@ -865,49 +868,48 @@ QString PrepareGlobal::createCfgLines(QString subDetectorShort, QString partitio
 }
 
 int PrepareGlobal::getVersions(QString partitionName, int runNumber,
-				  int& fecMajor, int&  fecMinor,
-				  int& fedMajor, int&  fedMinor,
-				  int& cablingMajor, int& cablingMinor,
-				  int& dcuMajor, int& dcuMinor,
-				  int& maskMajor, int& maskMinor,
-				  int& dcuPsuMajor, int& dcuPsuMinor){
+			       int& fecMajor, int&  fecMinor,
+			       int& fedMajor, int&  fedMinor,
+			       int& cablingMajor, int& cablingMinor,
+			       int& dcuMajor, int& dcuMinor,
+			       int& maskMajor, int& maskMinor,
+			       int& dcuPsuMajor, int& dcuPsuMinor){
     
     int result = RESULT_UNKNOWN;
     
     if (DbConnection::Inst()->dbConnected()) {
-	    QString myQuery;
-	    myQuery = QString(SELECTLATESTVERSIONS).arg(runNumber).arg(partitionName);
-        QSqlQuery query(myQuery);
-	    bool rset = query.exec();	
-	    int resultCounter = 0;
-	    if (rset) {
-		while (query.next()) {
-		    fecMajor     = query.value(0).toInt();
-		    fecMinor     = query.value(1).toInt();
-		    fedMajor     = query.value(2).toInt();
-		    fedMinor     = query.value(3).toInt();
-		    cablingMajor = query.value(4).toInt();
-		    cablingMinor = query.value(5).toInt();
-		    dcuMajor     = query.value(6).toInt();
-		    dcuMinor     = query.value(7).toInt();
-		    dcuPsuMajor  = query.value(8).toInt();
-		    dcuPsuMinor  = query.value(9).toInt();
-		    maskMajor    = query.value(10).toInt();
-		    maskMinor    = query.value(11).toInt();
-		    
-		    resultCounter++;
-		}
-	    }
-	    if (resultCounter==1) {
-		result=RESULT_OK;
-	    } else {
-		if(Debug::Inst()->getEnabled()) qDebug() << "ERROR: in PrepareGlobal::getVersions "
-			<< "I found more that one answer to the SELECT query\n";
+      QString myQuery;
+      myQuery = QString(SELECTLATESTVERSIONS).arg(runNumber).arg(partitionName);
+      QSqlQuery query(myQuery);
+      bool rset = query.exec();	
+      int resultCounter = 0;
+      if (rset) {
+	while (query.next()) {
+	  fecMajor     = query.value(0).toInt();
+	  fecMinor     = query.value(1).toInt();
+	  fedMajor     = query.value(2).toInt();
+	  fedMinor     = query.value(3).toInt();
+	  cablingMajor = query.value(4).toInt();
+	  cablingMinor = query.value(5).toInt();
+	  dcuMajor     = query.value(6).toInt();
+	  dcuMinor     = query.value(7).toInt();
+	  dcuPsuMajor  = query.value(8).toInt();
+	  dcuPsuMinor  = query.value(9).toInt();
+	  maskMajor    = query.value(10).toInt();
+	  maskMinor    = query.value(11).toInt();	  
+	  resultCounter++;
+	}
+      }
+      if (resultCounter==1) {
+	result=RESULT_OK;
+      } else {
+	if(Debug::Inst()->getEnabled()) qDebug() << "ERROR: in PrepareGlobal::getVersions "
+						 << "I found more that one answer to the SELECT query\n";
 		result=RESULT_UNKNOWN;
-	    }
+      }
     } else {
-	if(Debug::Inst()->getEnabled()) qDebug() << "ERROR dbConnection is NULL "
-		<< "in PrepareGlobal::getVersions\n";
+      if(Debug::Inst()->getEnabled()) qDebug() << "ERROR dbConnection is NULL "
+					       << "in PrepareGlobal::getVersions\n";
     }
     
     return result;
@@ -915,61 +917,60 @@ int PrepareGlobal::getVersions(QString partitionName, int runNumber,
 }
 
 QString PrepareGlobal::createCfgLines(QString subDetectorShort, QString partitionName,
-                     int runNumber, bool& isValid, bool &isFirst) {
-    int fecMajor=0;
-    int fecMinor=0;
-    int fedMajor=0;
-    int fedMinor=0;
-    int cablingMajor=0;
-    int cablingMinor=0;
-    int dcuMajor=0;
-    int dcuMinor=0;
-    int dcuPsuMajor=0;
-    int dcuPsuMinor=0;
-    int maskMajor=0;
-    int maskMinor=0;
-    int result = RESULT_UNKNOWN;
-    QString cfgLines=QString("");
+				      int runNumber, bool& isValid, bool &isFirst) {
+  int fecMajor=0;
+  int fecMinor=0;
+  int fedMajor=0;
+  int fedMinor=0;
+  int cablingMajor=0;
+  int cablingMinor=0;
+  int dcuMajor=0;
+  int dcuMinor=0;
+  int dcuPsuMajor=0;
+  int dcuPsuMinor=0;
+  int maskMajor=0;
+  int maskMinor=0;
+  int result = RESULT_UNKNOWN;
+  QString cfgLines=QString("");
 
-    if (DbConnection::Inst()->dbConnected()) {
-        QString myQuery;
-        myQuery = QString(SELECTLATESTVERSIONS).arg(runNumber).arg(partitionName);
-        QSqlQuery query(myQuery);
-        bool rset = query.exec();
-        int resultCounter = 0;
-        if (rset) {
-        while (query.next()) {
-            fecMajor     = query.value(0).toInt();
-            fecMinor     = query.value(1).toInt();
-            fedMajor     = query.value(2).toInt();
-            fedMinor     = query.value(3).toInt();
-            cablingMajor = query.value(4).toInt();
-            cablingMinor = query.value(5).toInt();
-            dcuMajor     = query.value(6).toInt();
-            dcuMinor     = query.value(7).toInt();
-            dcuPsuMajor  = query.value(8).toInt();
-            dcuPsuMinor  = query.value(9).toInt();
-            maskMajor    = query.value(10).toInt();
-            maskMinor    = query.value(11).toInt();
-            resultCounter++;
-        }
-        }
-        if (resultCounter==1) {
-        result=RESULT_OK;
-        } else {
-        if(Debug::Inst()->getEnabled()) qDebug() << "ERROR: in PrepareGlobal::getVersions "
-            << "I found more that one answer to the SELECT query\n";
-        result=RESULT_UNKNOWN;
-        }
-
-    } else {
-    if(Debug::Inst()->getEnabled()) qDebug() << "ERROR dbConnection is NULL "
-        << "in PrepareGlobal::getVersions\n";
+  if (DbConnection::Inst()->dbConnected()) {
+    QString myQuery;
+    myQuery = QString(SELECTLATESTVERSIONS).arg(runNumber).arg(partitionName);
+    QSqlQuery query(myQuery);
+    bool rset = query.exec();
+    int resultCounter = 0;
+    if (rset) {
+      while (query.next()) {
+	fecMajor     = query.value(0).toInt();
+	fecMinor     = query.value(1).toInt();
+	fedMajor     = query.value(2).toInt();
+	fedMinor     = query.value(3).toInt();
+	cablingMajor = query.value(4).toInt();
+	cablingMinor = query.value(5).toInt();
+	dcuMajor     = query.value(6).toInt();
+	dcuMinor     = query.value(7).toInt();
+	dcuPsuMajor  = query.value(8).toInt();
+	dcuPsuMinor  = query.value(9).toInt();
+	maskMajor    = query.value(10).toInt();
+	maskMinor    = query.value(11).toInt();
+	resultCounter++;
+      }
     }
-
-    if (result==RESULT_OK) {
-
-    //cfgLines  = QString::QString(Form("%s",(isFirst ? "\\\n" : ",\\\n") )); 
+    if (resultCounter==1) {
+      result=RESULT_OK;
+    } else {
+      if(Debug::Inst()->getEnabled()) qDebug() << "ERROR: in PrepareGlobal::getVersions "
+					       << "I found more that one answer to the SELECT query\n";
+      result=RESULT_UNKNOWN;
+    }
+    
+  } else {
+    if(Debug::Inst()->getEnabled()) qDebug() << "ERROR dbConnection is NULL "
+					     << "in PrepareGlobal::getVersions\n";
+  }
+  
+  if (result==RESULT_OK) {
+    
     cfgLines  = QString("%1").arg( (isFirst ? "\\\n" : ",\\\n"));
     cfgLines += QString("\tPart%1= cms.untracked.PSet(\\\n").arg(subDetectorShort);
     cfgLines += QString("\t\tPartitionName = cms.untracked.string(\"%1\"),\\\n").arg(partitionName);
@@ -984,13 +985,13 @@ QString PrepareGlobal::createCfgLines(QString subDetectorShort, QString partitio
     cfgLines += QString("\t\t\\\n\t)");
 
     if(isFirst == true) isFirst = false;
-
-    } else {
+    
+  } else {
     isValid = false;
-    }
-
-    return cfgLines;
-
+  }
+  
+  return cfgLines;
+  
 }
 
 void PrepareGlobal::on_btnSetConf_clicked() {   
@@ -1007,12 +1008,12 @@ void PrepareGlobal::on_btnSetConf_clicked() {
     QString cfgLines=QString("");
 
     if (result == RESULT_UNKNOWN) {
-    if(Debug::Inst()->getEnabled()) qDebug() << "ERROR in PrepareGlobal::getRunNumbers()."
-        << "Could not retreive the next available global run number\n";
+      if(Debug::Inst()->getEnabled()) qDebug() << "ERROR in PrepareGlobal::getRunNumbers()."
+					       << "Could not retreive the next available global run number\n";
     } else {
    
     // Prepare the version control here
-    if (cmbTib->currentText()!=NONE_STRING) {
+      if (cmbTib->currentText()!=NONE_STRING) {
         partitionName=cmbTib->currentText();
         preparePartitionState(partitionName, TIB_ID, nextRun);
     }
@@ -1060,9 +1061,9 @@ void PrepareGlobal::on_btnSetConf_clicked() {
     //std::cout << checkVer << std::endl;
 
     if (checkVer!=RESULT_OK && checkVer != RESULT_ALMOST_OK) {
-        statusBar()->showMessage("Error in checking versions");
-        if(Debug::Inst()->getEnabled()) qDebug() << "Error checking versions\n";
-        return;
+      statusBar()->showMessage("Error in checking versions");
+      if(Debug::Inst()->getEnabled()) qDebug() << "Error checking versions\n";
+      return;
     }
    
     // Everything is fine: start the O2O
@@ -1123,25 +1124,26 @@ void PrepareGlobal::on_btnSetConf_clicked() {
 }
 
 bool PrepareGlobal::launchTerminal( QStringList & commandList, bool modal ) {
-    bool result = false;
-    QProcess* proc = new QProcess( this );
-    TkTerminalDialog* myTerminal = new TkTerminalDialog( this );
-    myTerminal->setProcessPtr(proc);
+
+  bool result = false;
+  QProcess* proc = new QProcess( this );
+  TkTerminalDialog* myTerminal = new TkTerminalDialog( this );
+  myTerminal->setProcessPtr(proc);
    
-    //proc->setArguments( commandList );
+  //proc->setArguments( commandList );
+  
+  connect( proc, SIGNAL(readyReadStandardOutput()),
+	   myTerminal, SLOT(readFromStdout()) );
+  connect( proc, SIGNAL(finished(int, QProcess::ExitStatus)),
+	   myTerminal, SLOT(processFinished(int, QProcess:ExitStatus)) );
 
-    connect( proc, SIGNAL(readyReadStandardOutput()),
-         myTerminal, SLOT(readFromStdout()) );
-    connect( proc, SIGNAL(finished(int, QProcess::ExitStatus)),
-         myTerminal, SLOT(processFinished(int, QProcess:ExitStatus)) );
 
+  QTimer *timer = new QTimer(this);
+  connect(timer, SIGNAL(timeout()), myTerminal, SLOT(executeWaitForReadyRead()));
+  timer->start(100);
 
-    QTimer *timer = new QTimer(this);
-    connect(timer, SIGNAL(timeout()), myTerminal, SLOT(executeWaitForReadyRead()));
-    timer->start(100);
-
-    proc->start( commandList.join(" ") );
-    if ( !proc->waitForStarted() ) {
+  proc->start( commandList.join(" ") );
+  if ( !proc->waitForStarted() ) {
     // TODO: error handling
     // at least a message
     statusBar()->showMessage("Could not start analysis");
@@ -1169,10 +1171,10 @@ bool PrepareGlobal::launchTerminal( QStringList & commandList, bool modal ) {
     //} else {
     //  result = false;
     //}
-
-    }
-   
-    return result;
+    
+  }
+  
+  return result;
 
 }
 
