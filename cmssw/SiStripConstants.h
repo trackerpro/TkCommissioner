@@ -1,4 +1,3 @@
-// Last commit: $Id: SiStripConstants.h,v 1.23 2007/06/19 12:16:52 bainbrid Exp $
 
 #ifndef SiStripConstants_H
 #define SiStripConstants_H

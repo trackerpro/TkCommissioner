@@ -1,4 +1,3 @@
-// Last commit: $Id: SiStripFecKey.h,v 1.16 2008/02/21 16:51:55 bainbrid Exp $
 
 #ifndef SiStripFecKey_H
 #define SiStripFecKey_H
@@ -71,8 +70,8 @@ class SiStripFecKey : public SiStripKey {
   SiStripFecKey( const SiStripKey& );
 
   /** Copy to level specified by granularity. */
-  //SiStripFecKey( const SiStripKey&,
-  //	 const sistrip::Granularity& );
+  SiStripFecKey( const SiStripKey&,
+		 const sistrip::Granularity& );
 
   /** Default constructor */
   SiStripFecKey();
@@ -80,25 +79,25 @@ class SiStripFecKey : public SiStripKey {
   // ---------- Control structure ----------
   
   /** Returns VME crate. */
-  const uint16_t& fecCrate() const;
+  inline const uint16_t& fecCrate() const;
   
   /** Returns FEC identifier (VME slot). */
-  const uint16_t& fecSlot() const;
+  inline const uint16_t& fecSlot() const;
   
   /** Returns FEC control ring. */
-  const uint16_t& fecRing() const;
+  inline const uint16_t& fecRing() const;
   
   /** Returns CCU module. */
-  const uint16_t& ccuAddr() const;
+  inline const uint16_t& ccuAddr() const;
 
   /** Returns Front-End module. */
-  const uint16_t& ccuChan() const;
+  inline const uint16_t& ccuChan() const;
 
   /** Returns LLD channel. */
-  const uint16_t& lldChan() const;
+  inline const uint16_t& lldChan() const;
 
   /** Returns I2C address ("invalid" if inconsistent with LLD chan. */
-  const uint16_t& i2cAddr() const;
+  inline const uint16_t& i2cAddr() const;
 
   // ---------- Hybrid APV/LLD numbering scheme ---------- 
   
@@ -127,18 +126,18 @@ class SiStripFecKey : public SiStripKey {
   bool isConsistent( const SiStripKey& ) const;
   
   /** Identifies all member data as being "valid" or "all" (null). */
-  //bool isValid() const;
+  bool isValid() const;
   
   /** All member data to level of "Granularity" are "valid". If
       sistrip::Granularity is "undefined", returns false. */
-  //bool isValid( const sistrip::Granularity& ) const;
+  bool isValid( const sistrip::Granularity& ) const;
   
   /** Identifies all member data as being "invalid". */
-  //bool isInvalid() const;
+  bool isInvalid() const;
 
   /** All member data to level of "Granularity" are invalid. If
       sistrip::Granularity is "undefined", returns true.  */
-  //bool isInvalid( const sistrip::Granularity& ) const;
+  bool isInvalid( const sistrip::Granularity& ) const;
 
   // ---------- Print methods ----------
 
@@ -202,13 +201,13 @@ class SiStripFecKey : public SiStripKey {
 
 // ---------- Inline methods ----------
 
-//const uint16_t& SiStripFecKey::fecCrate() const { return fecCrate_; }
-//const uint16_t& SiStripFecKey::fecSlot() const { return fecSlot_; }
-//const uint16_t& SiStripFecKey::fecRing() const { return fecRing_; }
-//const uint16_t& SiStripFecKey::ccuAddr() const { return ccuAddr_; }
-//const uint16_t& SiStripFecKey::ccuChan() const { return ccuChan_; }
-//const uint16_t& SiStripFecKey::lldChan() const { return lldChan_; }
-//const uint16_t& SiStripFecKey::i2cAddr() const { return i2cAddr_; }
+const uint16_t& SiStripFecKey::fecCrate() const { return fecCrate_; }
+const uint16_t& SiStripFecKey::fecSlot() const { return fecSlot_; }
+const uint16_t& SiStripFecKey::fecRing() const { return fecRing_; }
+const uint16_t& SiStripFecKey::ccuAddr() const { return ccuAddr_; }
+const uint16_t& SiStripFecKey::ccuChan() const { return ccuChan_; }
+const uint16_t& SiStripFecKey::lldChan() const { return lldChan_; }
+const uint16_t& SiStripFecKey::i2cAddr() const { return i2cAddr_; }
 
 /* const uint16_t& SiStripFecKey::fecCrate() const {  */
 /*   return ( key()>>fecCrateOffset_ ) & fecCrateMask_ != fecCrateMask_ ? ( key()>>fecCrateOffset_ ) & fecCrateMask_ : sistrip::invalid_;  */
@@ -245,4 +244,4 @@ class ConsistentWithKey {
   SiStripFecKey mask_;
 };
 
-#endif // DataFormats_SiStripCommon_SiStripFecKey_H
+#endif // SiStripFecKey_H

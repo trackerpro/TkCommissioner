@@ -1,4 +1,3 @@
-// Last commit: $Id: ConstantsForGranularity.h,v 1.5 2009/02/10 21:45:54 lowette Exp $
 
 #ifndef ConstantsForGranularity_H
 #define ConstantsForGranularity_H
@@ -96,6 +95,6 @@ namespace sistrip {
 
 }
   
-#endif
+#endif // ConstantsForGranularity_H
 
 

@@ -140,7 +140,7 @@ void TreeViewerRunInfo::buildTreeInfo(QPair<QString, QString> runid_, QPair<QStr
 
     currentFile = new TFile(qPrintable(currentFileName));
     TTree* inputCurrentTree   = (TTree*)currentFile->Get(qPrintable(currentTreePath));    
-
+    
     if (inputCurrentTree) { // tree found
       if (currentTree) {
 	if (referenceTree) currentTree->RemoveFriend(referenceTree);
@@ -161,11 +161,12 @@ void TreeViewerRunInfo::buildTreeInfo(QPair<QString, QString> runid_, QPair<QStr
       while ((key = (TKey*)next())){
 	TClass *cl = gROOT->GetClass(key->GetClassName());
 	if (!cl->InheritsFrom("TTree")) continue;
-	TTree *tree = (TTree*)key->ReadObj();
+	TTree *tree = (TTree*)key->ReadObj();	
 	if(not tree or not TString(tree->GetName()).Contains("friend")) continue;
 	currentFriendTrees.push_back(tree->CloneTree());
 	currentTree->AddFriend(currentFriendTrees.back());
 	currentTree->BuildIndex("DeviceId");
+	currentFriendTrees.back()->BuildIndex("DeviceId");
 	delete tree;
       }
 

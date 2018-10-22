@@ -110,18 +110,22 @@ bool TreeViewer::addRun(QString partitionName, QString runNumber, bool isCurrent
     treePath.first = analysisTreeFilename;
     treePath.second = "DBTree";
     treeInfo.buildTreeInfo(runId, treePath, isCurrent);
+
     TObjArray* branchList = ( isCurrent ? treeInfo.getCurrentTree()->GetListOfBranches() : treeInfo.getReferenceTree()->GetListOfBranches() );
     for(int itree = 0; itree < (isCurrent ? treeInfo.getCurrentFriendTrees().size() : treeInfo.getReferenceFriendTrees().size()); itree++){
       TObjArray* friend_branchList = (isCurrent ? treeInfo.getCurrentFriendTrees().at(itree)->GetListOfBranches() : treeInfo.getReferenceFriendTrees().at(itree)->GetListOfBranches());
+
       for(int ibranch = 0; ibranch < friend_branchList->GetSize(); ibranch++){	  
-	if(branchList->FindObject(friend_branchList->At(ibranch)->GetName()))
+	if(not friend_branchList->At(ibranch)) continue;
+	if(branchList->FindObject(friend_branchList->At(ibranch)->GetName())){
 	  continue;
+	}
 	else{
-	  branchList->Add(friend_branchList->At(ibranch));
+	  branchList->Add(friend_branchList->At(ibranch));	  
 	}	    
       }
     }
-    
+
     if (isCurrent) {
         if (selMap.size() != 0) selMap.clear();
         for (int i = 0; i < treeInfo.getCurrentTree()->GetEntries(); i++) selMap.push_back(0);

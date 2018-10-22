@@ -346,6 +346,8 @@ void SelectionDetails::on_btnShowTrend_clicked() {
     else if (runtype == "VPSPSCAN")                                            runtypetable = "ANALYSISVPSPSCAN";
     else if (runtype == "VERY_FAST_CONNECTION" || runtype == "FASTFEDCABLING") runtypetable = "ANALYSISFASTFEDCABLING";
     else if (runtype == "PEDESTALS" || runtype == "PEDESTAL")                  runtypetable = "ANALYSISPEDESTALS";
+    else if (runtype == "CALIBRATION" || runtype == "CALIBRATON_DECO" || 
+	     runtype == "CALIBRATION_SCAN" || runtype == "CALIBRATON_SCAN_DECO") runtypetable = "ANALYSISCALIBRATION";
     else if (runtype == "SCOPE"){                                              runtypetable = "ANALYSISPEDESTALS"; runtypetable_alt = "ANALYSISTIMING"; }
     else return;
     plotvar = runtypetable + "." + var;

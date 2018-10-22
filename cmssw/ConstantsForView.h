@@ -32,6 +32,6 @@ namespace sistrip {
   
 }
   
-#endif
+#endif // ConstantsForView_H
 
 

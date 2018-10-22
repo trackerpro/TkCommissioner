@@ -1,4 +1,3 @@
-// Last commit: $Id: ConstantsForRunType.h,v 1.11 2009/10/22 15:57:40 lowette Exp $
 
 #ifndef ConstantsForRunType_H
 #define ConstantsForRunType_H

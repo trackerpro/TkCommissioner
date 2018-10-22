@@ -1,4 +1,3 @@
-// Last commit: $Id: SiStripKey.cc,v 1.6 2008/02/06 14:32:54 bainbrid Exp $
 
 #include "SiStripKey.h"
 #include "Constants.h" 
@@ -55,7 +54,6 @@ SiStripKey::SiStripKey() :
 // -----------------------------------------------------------------------------
 // 
 bool SiStripKey::isEqual( const SiStripKey& input ) const {
-  if ( !(&input) ) { return false; }
   if ( key_ == input.key() &&
        path_ == input.path() &&
        granularity_ == input.granularity() &&
@@ -81,7 +79,7 @@ bool SiStripKey::isValid() const {
 
 // -----------------------------------------------------------------------------
 //
-bool SiStripKey::isValid( const sistrip::Granularity& ) const { 
+bool SiStripKey::isValid( const sistrip::Granularity& gran ) const { 
   return isValid();
 }
 
@@ -96,7 +94,7 @@ bool SiStripKey::isInvalid() const {
 
 // -----------------------------------------------------------------------------
 //
-bool SiStripKey::isInvalid( const sistrip::Granularity& ) const { 
+bool SiStripKey::isInvalid( const sistrip::Granularity& gran ) const { 
   return isInvalid();
 }
 
@@ -111,7 +109,7 @@ void SiStripKey::print( std::stringstream& ss ) const {
      << std::setfill(' ') 
      << std::dec
      << " Directory   : " << path() << std::endl
-     << " Granularity : " 
+    //<< " Granularity : " 
     //     << SiStripEnumsAndStrings::granularity( granularity() ) << std::endl
      << " Channel     : " << channel();
 }

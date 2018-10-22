@@ -1,7 +1,6 @@
-// Last commit: $Id: Constants.h,v 1.8 2009/05/08 12:03:33 elmer Exp $
 
-#ifndef Constants_H
-#define Constants_H
+#ifndef DataFormats_SiStripCommon_Constants_H
+#define DataFormats_SiStripCommon_Constants_H
 
 #include <string>
 #include <stdint.h>
@@ -24,4 +23,4 @@ namespace sistrip {
   
 }
 
-#endif // Constants_H
+#endif // DataFormats_SiStripCommon_Constants_H

@@ -309,6 +309,21 @@ struct BaseQuery {
             query.push_back(std::make_pair("Dead"   ,       new IntFromStringMap() ) );
             query.push_back(std::make_pair("Noisy",         new IntFromStringMap() ) );
         } 
+        else if(runType == "CALIBRATION" || runType == "CALIBRATION_DECO" || runType == "CALIBRATION_SCAN_DECO" || runType == "CALIBRATION_SCAN") {
+            query.push_back(std::make_pair("DeviceId",      new Double() ) );
+            query.push_back(std::make_pair("FedId",         new Double() ) );
+            query.push_back(std::make_pair("FeUnit",        new Double() ) );
+            query.push_back(std::make_pair("FeChan",        new Double() ) );
+            query.push_back(std::make_pair("FeApv",         new Double() ) );
+            query.push_back(std::make_pair("Amplitude",     new Double() ) );
+            query.push_back(std::make_pair("Tail",          new Double() ) );
+            query.push_back(std::make_pair("RiseTime",      new Double() ) );
+            query.push_back(std::make_pair("TimeConstant",  new Double() ) );
+            query.push_back(std::make_pair("Smearing",      new Double() ) );
+            query.push_back(std::make_pair("Chi2",          new Double() ) );
+            query.push_back(std::make_pair("DeconvMode",    new Double() ) );
+            query.push_back(std::make_pair("IsValid",       new Double() ) );
+        } 
         else if(runType == "SCOPE") {
             query.push_back(std::make_pair("DeviceId"   , new Double() ) );
             query.push_back(std::make_pair("FedId"      , new Double() ) );

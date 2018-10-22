@@ -9,6 +9,7 @@
 #include "frmterminaldialog.h"
 #include "Debug.h"
 #include "DbConnection.h"
+#include <fstream>
 
 // Defines
 
@@ -18,7 +19,9 @@
 #define TECM_ID "TEC-"
 #define O2O_ID "O2O"
 
-#define PREPAREGLOBAL_SCRIPT "/nfshome0/trackerpro/o2o/scripts/prepareGlobal_90X.sh"
+#define PREPAREGLOBAL_SCRIPT "/nfshome0/trackerpro/o2o/scripts/prepareGlobal.sh"
+//#define PREPAREGLOBAL_SCRIPT "/nfshome0/trackerpro/o2o/scripts/testDAQO2O.sh"
+#define PREPAREO2OCONFIG_SCRIPT "/nfshome0/trackerpro/o2o/scripts/SiSitrpO2OConfig.py"
 
 #define SELECTPARTNAMES "select partitionname, max(o2oid) as o2oid from partition, StateHistory, CurrentState, O2OPartition where StateHistory.partitionid=Partition.partitionId and StateHistory.stateHistoryId=CurrentState.stateHistoryId and Partition.partitionId = O2OPartition.partitionid and SUBDETECTOR = '%1' group by partitionname order by O2OID asc"
 
@@ -80,7 +83,7 @@ PrepareGlobal::PrepareGlobal(QWidget * parent):
     configuration[TOBPART]  = cmbTob;
     configuration[TECPPART] = cmbTecp;
     configuration[TECMPART] = cmbTecm;
-    
+
     configuration[TIBRR]    = comboBoxReadRouteTib;
     configuration[TOBRR]    = comboBoxReadRouteTob;
     configuration[TECPRR]   = comboBoxReadRouteTecp;
@@ -98,6 +101,7 @@ PrepareGlobal::PrepareGlobal(QWidget * parent):
     getCurrentConfiguration();
     cacheOldConfiguration();
     readoutChanged();
+    
 }
 
 PrepareGlobal::~PrepareGlobal() {
@@ -660,7 +664,8 @@ int PrepareGlobal::checkVersions( bool checkO2O ){
   tecpr = xCheckPartition(cmbTecp->currentText(), TECP_ID);
   //std::cout << "tecpr: " << tecpr << std::endl; // debug   
   tecmr = xCheckPartition(cmbTecm->currentText(), TECM_ID);
-  //std::cout << "tecmr: " << tecmr << std::endl; // debug   
+  // std::cout << "tecmr: " << tecmr << std::endl; // debug   
+
   runnr=getRunNumbers(nextRunNumber, lastIovRunNumber);
   //std::cout << "runnr: " << runnr << std::endl; // debug 
   if (checkO2O) {
@@ -711,7 +716,7 @@ int PrepareGlobal::checkVersions( bool checkO2O ){
   
   // TODO: update the partition names if resultState==RESULT_OK
   displayStatus(resultState, nextRunNumber, lastIovRunNumber, allowO2O);
-  
+
   return resultState;
 }
 
@@ -842,13 +847,13 @@ bool PrepareGlobal::confirmO2O(int nextRunNumber) {
 }
 
 QString PrepareGlobal::createCfgLines(QString subDetectorShort, QString partitionName,
-					 int fecMajor, int fecMinor,
-					 int fedMajor, int fedMinor,
-					 int cablingMajor, int cablingMinor,
-					 int dcuMajor, int dcuMinor,
-					 int maskMajor, int maskMinor,
-					 int dcuPsuMajor, int dcuPsuMinor){
-    
+				      int fecMajor, int fecMinor,
+				      int fedMajor, int fedMinor,
+				      int cablingMajor, int cablingMinor,
+				      int dcuMajor, int dcuMinor,
+				      int maskMajor, int maskMinor,
+				      int dcuPsuMajor, int dcuPsuMinor){
+  
     QString cfgLines;
     
     cfgLines  = QString("\tPart%1= cms.untracked.PSet(\\\n").arg(subDetectorShort);
@@ -956,6 +961,7 @@ QString PrepareGlobal::createCfgLines(QString subDetectorShort, QString partitio
 	resultCounter++;
       }
     }
+
     if (resultCounter==1) {
       result=RESULT_OK;
     } else {
@@ -971,18 +977,18 @@ QString PrepareGlobal::createCfgLines(QString subDetectorShort, QString partitio
   
   if (result==RESULT_OK) {
     
-    cfgLines  = QString("%1").arg( (isFirst ? "\\\n" : ",\\\n"));
-    cfgLines += QString("\tPart%1= cms.untracked.PSet(\\\n").arg(subDetectorShort);
-    cfgLines += QString("\t\tPartitionName = cms.untracked.string(\"%1\"),\\\n").arg(partitionName);
-    cfgLines += QString("\t\tForceCurrentState = cms.untracked.bool(False),\\\n");
-    cfgLines += QString("\t\tForceVersions = cms.untracked.bool(True), \\\n");
-    cfgLines += QString("\t\tCablingVersion = cms.untracked.vuint32(%1,%2),\\\n").arg(cablingMajor).arg(cablingMinor);
-    cfgLines += QString("\t\tFecVersion = cms.untracked.vuint32(%1,%2),\\\n").arg(fecMajor).arg(fecMinor);
-    cfgLines += QString("\t\tFedVersion = cms.untracked.vuint32(%1,%2),\\\n").arg(fedMajor).arg(fedMinor);
-    cfgLines += QString("\t\tDcuDetIdsVersion = cms.untracked.vuint32(%1,%2),\\\n").arg(dcuMajor).arg(dcuMinor);
-    cfgLines += QString("\t\tMaskVersion = cms.untracked.vuint32(%1,%2),\\\n").arg(maskMajor).arg(maskMinor);
-    cfgLines += QString("\t\tDcuPsuMapVersion = cms.untracked.vuint32(%1,%2)\\\n").arg(dcuPsuMajor).arg(dcuPsuMinor);
-    cfgLines += QString("\t\t\\\n\t)");
+    //fgLines  = QString("%1").arg( (isFirst ? "\\\n" : ",\\\n"));
+    cfgLines += QString("\tPart%1= cms.untracked.PSet( \n").arg(subDetectorShort);
+    cfgLines += QString("\t\tPartitionName = cms.untracked.string(\'%1\'),\n").arg(partitionName);
+    cfgLines += QString("\t\tForceCurrentState = cms.untracked.bool(False),\n");
+    cfgLines += QString("\t\tForceVersions = cms.untracked.bool(True),\n");
+    cfgLines += QString("\t\tCablingVersion = cms.untracked.vuint32(%1,%2),\n").arg(cablingMajor).arg(cablingMinor);
+    cfgLines += QString("\t\tFecVersion = cms.untracked.vuint32(%1,%2),\n").arg(fecMajor).arg(fecMinor);
+    cfgLines += QString("\t\tFedVersion = cms.untracked.vuint32(%1,%2),\n").arg(fedMajor).arg(fedMinor);
+    cfgLines += QString("\t\tDcuDetIdsVersion = cms.untracked.vuint32(%1,%2),\n").arg(dcuMajor).arg(dcuMinor);
+    cfgLines += QString("\t\tMaskVersion = cms.untracked.vuint32(%1,%2),\n").arg(maskMajor).arg(maskMinor);
+    cfgLines += QString("\t\tDcuPsuMapVersion = cms.untracked.vuint32(%1,%2),").arg(dcuPsuMajor).arg(dcuPsuMinor);
+    cfgLines += QString("\t\t\n\t), \n");
 
     if(isFirst == true) isFirst = false;
     
@@ -995,8 +1001,8 @@ QString PrepareGlobal::createCfgLines(QString subDetectorShort, QString partitio
 }
 
 void PrepareGlobal::on_btnSetConf_clicked() {   
-    int nextRun, lastIovRun, result;
 
+    int nextRun, lastIovRun, result;
     QString partitionName;
     /*   int fecMajor; int fecMinor; */
     /*   int fedMajor; int fedMinor; */
@@ -1012,54 +1018,52 @@ void PrepareGlobal::on_btnSetConf_clicked() {
 					       << "Could not retreive the next available global run number\n";
     } else {
    
-    // Prepare the version control here
+      // Prepare the version control here
       if (cmbTib->currentText()!=NONE_STRING) {
         partitionName=cmbTib->currentText();
-        preparePartitionState(partitionName, TIB_ID, nextRun);
-    }
-    if (cmbTob->currentText()!=NONE_STRING) {
+	preparePartitionState(partitionName, TIB_ID, nextRun);
+      }
+      if (cmbTob->currentText()!=NONE_STRING) {
         partitionName=cmbTob->currentText();
-        preparePartitionState(partitionName, TOB_ID, nextRun);
-    }
-    if (cmbTecp->currentText()!=NONE_STRING) {
+	preparePartitionState(partitionName, TOB_ID, nextRun);
+      }
+      if (cmbTecp->currentText()!=NONE_STRING) {
         partitionName=cmbTecp->currentText();
-        preparePartitionState(partitionName, TECP_ID, nextRun);
-    }
-    if (cmbTecm->currentText()!=NONE_STRING) {
+	preparePartitionState(partitionName, TECP_ID, nextRun);
+      }
+      if (cmbTecm->currentText()!=NONE_STRING) {
         partitionName=cmbTecm->currentText();
-        preparePartitionState(partitionName, TECM_ID, nextRun);
+	preparePartitionState(partitionName, TECM_ID, nextRun);
+      }
     }
-   
+
     // Retreive the versions to prepare the cfg file
     bool versionsOk = true;
     bool isFirst = true;
     if (cmbTib->currentText()!=NONE_STRING) {
-        partitionName=cmbTib->currentText();
-        cfgLines += createCfgLines ("TIBD", partitionName, nextRun, versionsOk, isFirst);
+      partitionName=cmbTib->currentText();
+      cfgLines += createCfgLines ("TIBD", partitionName, nextRun, versionsOk, isFirst);
     }
     if (cmbTob->currentText()!=NONE_STRING) {
-        partitionName=cmbTob->currentText();
-        cfgLines += createCfgLines ("TOB", partitionName, nextRun, versionsOk, isFirst);
+      partitionName=cmbTob->currentText();
+      cfgLines += createCfgLines ("TOB", partitionName, nextRun, versionsOk, isFirst);
     }
     if (cmbTecp->currentText()!=NONE_STRING) {
-        partitionName=cmbTecp->currentText();
-        cfgLines += createCfgLines ("TECP", partitionName, nextRun, versionsOk, isFirst);
+      partitionName=cmbTecp->currentText();
+      cfgLines += createCfgLines ("TECP", partitionName, nextRun, versionsOk, isFirst);
     }
     if (cmbTecm->currentText()!=NONE_STRING) {
-        partitionName=cmbTecm->currentText();
-        cfgLines += createCfgLines ("TECM", partitionName, nextRun, versionsOk, isFirst);
+      partitionName=cmbTecm->currentText();
+      cfgLines += createCfgLines ("TECM", partitionName, nextRun, versionsOk, isFirst);
     }
-   
-
+    
     if (!versionsOk) {
-        statusBar()->showMessage("ERROR: Unable to retreive the version I just wrote to DB");
-        return;
+      statusBar()->showMessage("ERROR: Unable to retreive the version I just wrote to DB");
+      return;
     }
 
     int checkVer = checkVersions(false);
-
-    //std::cout << checkVer << std::endl;
-
+    
     if (checkVer!=RESULT_OK && checkVer != RESULT_ALMOST_OK) {
       statusBar()->showMessage("Error in checking versions");
       if(Debug::Inst()->getEnabled()) qDebug() << "Error checking versions\n";
@@ -1068,39 +1072,23 @@ void PrepareGlobal::on_btnSetConf_clicked() {
    
     // Everything is fine: start the O2O
     if ( (versionsOk)&&(checkVer==RESULT_OK || checkVer == RESULT_ALMOST_OK ) ) {
-      //QStringList commandArgs20X;
-      QStringList commandArgs21X;
-      QStringList commandArgs22X;
-      QStringList commandArgs31X;
+
+      std::ofstream o2oConfigFile;
+      o2oConfigFile.open(PREPAREO2OCONFIG_SCRIPT);
+      o2oConfigFile << cfgLines.toStdString().c_str();
+      o2oConfigFile.close();
+
+      QStringList commandArgs;
       QString runNumber;
-      //QString cmsswVersion20X;
-      QString cmsswVersion21X;
-      QString cmsswVersion22X;
-      QString cmsswVersion31X;
 
-      runNumber = QString("%1").arg(nextRun);
-      //cmsswVersion20X = "20x";
-      cmsswVersion21X = "21x";
-      cmsswVersion22X = "22x";
-      cmsswVersion31X = "31x";
+      runNumber = QString("%1").arg(nextRun);      
+      commandArgs << PREPAREGLOBAL_SCRIPT << runNumber << PREPAREO2OCONFIG_SCRIPT ;
 
-      commandArgs21X << PREPAREGLOBAL_SCRIPT
-             << runNumber << cfgLines << cmsswVersion21X;
+      // launch O2O, wait for return value       
+      if (launchTerminal(commandArgs, true) ) {
 
-      commandArgs31X << PREPAREGLOBAL_SCRIPT
-             << runNumber << cfgLines << cmsswVersion31X;
-
-      // blindly launching 31X O2O, terminal will be kept open until the process
-      // is finished, but no return value is obtained
-      // -> kept for future usage, now in disuse
-      //launchTerminal(commandArgs31X, false);
-
-
-      // launch 31X O2O, wait for return value
-      if (launchTerminal(commandArgs31X, true) ) {
-
-        confirmO2O(nextRun);
-        checkVersions();
+	confirmO2O(nextRun);
+	checkVersions();
 
         // put back this  message if there are two versions of O2O running in parallel
         //
@@ -1112,57 +1100,52 @@ void PrepareGlobal::on_btnSetConf_clicked() {
         //            "/opt/cmssw/shifter/o2o_2009/log_GR09_XXX_v1_hlt"
         //            , "OK", 0,
         //            0, 1 ) ;                                                            
-
-
+      
       } else {
-        checkVersions();
-        statusBar()->showMessage("O2O process failed");
-      }
-
-    }
+	checkVersions();
+	statusBar()->showMessage("O2O process failed");
+      }      
     }
 }
 
 bool PrepareGlobal::launchTerminal( QStringList & commandList, bool modal ) {
 
   bool result = false;
+
   QProcess* proc = new QProcess( this );
   TkTerminalDialog* myTerminal = new TkTerminalDialog( this );
   myTerminal->setProcessPtr(proc);
    
-  //proc->setArguments( commandList );
-  
-  connect( proc, SIGNAL(readyReadStandardOutput()),
-	   myTerminal, SLOT(readFromStdout()) );
-  connect( proc, SIGNAL(finished(int, QProcess::ExitStatus)),
-	   myTerminal, SLOT(processFinished(int, QProcess:ExitStatus)) );
-
+  //proc->setArguments( commandList );  
+  connect( proc, SIGNAL(readyReadStandardOutput()), myTerminal, SLOT(readFromStdout()) );
+  connect( proc, SIGNAL(finished(int, QProcess::ExitStatus)), myTerminal, SLOT(processFinished(int, QProcess::ExitStatus)) );
 
   QTimer *timer = new QTimer(this);
   connect(timer, SIGNAL(timeout()), myTerminal, SLOT(executeWaitForReadyRead()));
   timer->start(100);
-
+  
   proc->start( commandList.join(" ") );
+  
   if ( !proc->waitForStarted() ) {
     // TODO: error handling
     // at least a message
     statusBar()->showMessage("Could not start analysis");
     delete myTerminal;
     result = false;
-    } else {
+  } else {
     if(modal) {
-        if (myTerminal->exec()==QDialog::Accepted) {
+      if (myTerminal->exec() == QDialog::Accepted) {
         result = true;
-        } else {
-        result = false;
-        }
+      } else {
+	result = false;
+      }
     } else {
-        myTerminal->show();
-        if (myTerminal->result()==QDialog::Accepted) {
+      myTerminal->show();
+      if (myTerminal->result()==QDialog::Accepted) {
         result = true;
-        } else {
+      } else {
         result = false;
-        }
+      }
     }
 
     // Open the fake terminal window and wait for return    
@@ -1171,11 +1154,10 @@ bool PrepareGlobal::launchTerminal( QStringList & commandList, bool modal ) {
     //} else {
     //  result = false;
     //}
-    
   }
-  
-  return result;
 
+  return result;
+  
 }
 
 int PrepareGlobal::showCurrentState() {

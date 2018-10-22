@@ -1,4 +1,3 @@
-// Last commit: $Id: SiStripKey.h,v 1.6 2008/02/06 14:32:48 bainbrid Exp $
 
 #ifndef SiStripKey_H
 #define SiStripKey_H
@@ -84,10 +83,10 @@ class SiStripKey {
   // ---------- Print methods ----------
 
   /** Print member data of the key  */
-  virtual void print( std::stringstream&) const;
+  virtual void print( std::stringstream & ss ) const;
   
   /** A terse summary of the key  */
-  virtual void terse( std::stringstream&) const {;}
+  //  virtual void terse( std::stringstream & ss ) const {;}
   
  protected: 
 
@@ -133,6 +132,6 @@ void SiStripKey::path( const std::string& path ) { path_ = path; }
 void SiStripKey::granularity( const sistrip::Granularity& gran ) { granularity_ = gran; }
 void SiStripKey::channel( const uint16_t& chan ) { channel_ = chan; }
 
-#endif // DataFormats_SiStripCommon_SiStripKey_H
+#endif // SiStripKey_H
 
 

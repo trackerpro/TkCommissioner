@@ -1,4 +1,3 @@
-// Last commit: $Id: SiStripFedKey.h,v 1.14 2008/02/22 09:53:14 bainbrid Exp $
 
 #ifndef SiStripFedKey_H
 #define SiStripFedKey_H
@@ -128,18 +127,18 @@ class SiStripFedKey : public SiStripKey {
   bool isConsistent( const SiStripKey& ) const;
 
   /** Identifies all member data as being "valid" or null ("all"). */
-  //bool isValid() const;
+  bool isValid() const;
   
   /** All member data to level of "Granularity" are valid. If
       sistrip::Granularity is "undefined", returns false. */
-  //bool isValid( const sistrip::Granularity& ) const;
+  bool isValid( const sistrip::Granularity& ) const;
   
   /** Identifies all member data as being invalid. */
-  //bool isInvalid() const;
+  bool isInvalid() const;
 
   /** All member data to level of "Granularity" are invalid. If
       sistrip::Granularity is "undefined", returns true.  */
-  //bool isInvalid( const sistrip::Granularity& ) const;
+  bool isInvalid( const sistrip::Granularity& ) const;
 
   // ---------- Print methods ----------
   
@@ -198,7 +197,7 @@ const uint16_t& SiStripFedKey::feChan() const { return feChan_; }
 const uint16_t& SiStripFedKey::fedApv() const { return fedApv_; }
 uint16_t SiStripFedKey::fedChannel() const { return fedCh( feUnit_, feChan_ ); }
 
-#endif // DataFormats_SiStripCommon_SiStripFedKey_H
+#endif // SiStripFedKey_H
 
 
 

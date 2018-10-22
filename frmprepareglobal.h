@@ -6,12 +6,14 @@
 #include <QMap>
 #include <QMultiMap>
 #include <QMainWindow>
-
 // To set up the run selection tables in the startup window
 #include <QTableWidget>
 #include <QTableWidgetItem>
 #include <QStandardItemModel>
 #include <QStandardItem>
+
+#include <sstream>
+#include <iostream>
 
 // Other UIs needed here
 #include "frmpartitions.h"

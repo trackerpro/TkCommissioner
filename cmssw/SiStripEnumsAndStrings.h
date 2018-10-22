@@ -1,4 +1,3 @@
-// Last commit: $Id: SiStripEnumsAndStrings.h,v 1.4 2007/11/29 17:08:03 bainbrid Exp $
 
 #ifndef SiStripEnumsAndStrings_H
 #define SiStripEnumsAndStrings_H

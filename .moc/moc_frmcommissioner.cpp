@@ -1,7 +1,7 @@
 /****************************************************************************
 ** Meta object code from reading C++ file 'frmcommissioner.h'
 **
-** Created: Sun Jul 22 21:11:46 2018
+** Created: Mon Oct 22 16:29:07 2018
 **      by: The Qt Meta Object Compiler version 63 (Qt 4.8.2)
 **
 ** WARNING! All changes made in this file will be lost!

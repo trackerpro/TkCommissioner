@@ -1,4 +1,3 @@
-// Last commit: $Id: ConstantsForDqm.h,v 1.13 2010/01/04 18:44:33 lowette Exp $
 
 #ifndef ConstantsForDqm_H
 #define ConstantsForDqm_H
@@ -59,6 +58,9 @@ namespace sistrip {
 
     static const char clusterCharge_[]     = "ClusterCharge";
     static const char occupancy_[]         = "Occupancy";
+
+    // ---------- DaqScopMode : spy analysis -----
+    static const char scopeModeFrame_[] = "DaqScopeFrame";
     
   }
   
@@ -76,6 +78,6 @@ namespace sistrip {
   
 }
 
-#endif
+#endif // ConstantsForDqm_H
 
 

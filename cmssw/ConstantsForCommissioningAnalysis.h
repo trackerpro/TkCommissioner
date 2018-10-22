@@ -1,4 +1,3 @@
-// Last commit: $Id: ConstantsForCommissioningAnalysis.h,v 1.15 2010/06/02 09:40:31 wto Exp $
 
 #ifndef ConstantsForCommissioningAnalysis_H
 #define ConstantsForCommissioningAnalysis_H

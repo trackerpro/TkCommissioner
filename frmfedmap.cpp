@@ -56,7 +56,7 @@ FedMap::FedMap(const QVector<int>& smap, QPair<QString, QString> runid, TTree* t
             if (runNumber == run) mode = modeDescription;
         } 
 
-        if (mode != "PEDESTAL" && mode != "TIMING" && mode != "GAINSCAN" && mode != "VPSPSCAN") btnUpload->setEnabled(false); 
+        if (mode != "PEDESTAL" && mode != "TIMING" && mode != "GAINSCAN" && mode != "VPSPSCAN" && mode != "CALIBRATION_SCAN") btnUpload->setEnabled(false); 
 
     }
 
@@ -252,52 +252,64 @@ void FedMap::on_btnUpload_clicked() {
 
     if (chkEnable->isChecked() && feds.size() > 0) {
         if (mode.contains("PEDESTAL")) {
-            total.append("process.db_client.PedestalsParameters.doSelectiveUpload = cms.bool(True)\n");
-            total.append("process.db_client.PedestalsParameters.vetoModules = cms.bool(");
-            total.append(sveto);
-            total.append(")\n");
-            total.append("process.db_client.PedestalsParameters.fedMaskVector = cms.vuint32(");
-            for (int i = 0; i < feds.size(); i++) {
-                total.append(feds[i]->data(0).toString());
-                if (i < feds.size()-1) total.append(",");
+	  total.append("process.db_client.PedestalsParameters.doSelectiveUpload = cms.bool(True)\n");
+	  total.append("process.db_client.PedestalsParameters.vetoModules = cms.bool(");
+	  total.append(sveto);
+	  total.append(")\n");
+	  total.append("process.db_client.PedestalsParameters.fedMaskVector = cms.vuint32(");
+	  for (int i = 0; i < feds.size(); i++) {
+	    total.append(feds[i]->data(0).toString());
+	    if (i < feds.size()-1) total.append(",");
             }
-            total.append(")\n");
+	  total.append(")\n");
         }
         else if (mode.contains("TIMING")) {
-            total.append("process.db_client.ApvTimingParameters.doSelectiveUpload = cms.bool(True)\n");
-            total.append("process.db_client.ApvTimingParameters.vetoModules = cms.bool(");
-            total.append(sveto);
-            total.append(")\n");
-            total.append("process.db_client.ApvTimingParameters.fedMaskVector = cms.vuint32(");
-            for (int i = 0; i < feds.size(); i++) {
-                total.append(feds[i]->data(0).toString());
-                if (i < feds.size()-1) total.append(",");
-            }
-            total.append(")\n");
+	  total.append("process.db_client.ApvTimingParameters.doSelectiveUpload = cms.bool(True)\n");
+	  total.append("process.db_client.ApvTimingParameters.vetoModules = cms.bool(");
+	  total.append(sveto);
+	  total.append(")\n");
+	  total.append("process.db_client.ApvTimingParameters.fedMaskVector = cms.vuint32(");
+	  for (int i = 0; i < feds.size(); i++) {
+	    total.append(feds[i]->data(0).toString());
+	    if (i < feds.size()-1) total.append(",");
+	  }
+	  total.append(")\n");
         }
         else if (mode.contains("GAINSCAN")) {
-            total.append("process.db_client.OptoScanParameters.doSelectiveUpload = cms.bool(True)\n");
-            total.append("process.db_client.OptoScanParameters.vetoModules = cms.bool(");
-            total.append(sveto);
-            total.append(")\n");
-            total.append("process.db_client.OptoScanParameters.fedMaskVector = cms.vuint32(");
-            for (int i = 0; i < feds.size(); i++) {
-                total.append(feds[i]->data(0).toString());
-                if (i < feds.size()-1) total.append(",");
-            }
-            total.append(")\n");
+	  total.append("process.db_client.OptoScanParameters.doSelectiveUpload = cms.bool(True)\n");
+	  total.append("process.db_client.OptoScanParameters.vetoModules = cms.bool(");
+	  total.append(sveto);
+	  total.append(")\n");
+	  total.append("process.db_client.OptoScanParameters.fedMaskVector = cms.vuint32(");
+	  for (int i = 0; i < feds.size(); i++) {
+	    total.append(feds[i]->data(0).toString());
+	    if (i < feds.size()-1) total.append(",");
+	  }
+	  total.append(")\n");
+        }
+        else if (mode.contains("CALIBRATION_SCAN") or mode.contains("CALIBRATION_DECO") or mode.contains("CALIBRATION_SCAN_DECO")) {
+	  total.append("process.db_client.CalibrationParameters.doSelectiveUpload = cms.bool(True)\n");
+	  total.append("process.db_client.CalibrationParameters.vetoModules = cms.bool(");
+	  total.append(sveto);
+	  total.append(")\n");
+	  total.append("process.db_client.CalibrationParameters.fedMaskVector = cms.vuint32(");
+	  for (int i = 0; i < feds.size(); i++) {
+	    total.append(feds[i]->data(0).toString());
+	    if (i < feds.size()-1) total.append(",");
+	  }
+	  total.append(")\n");
         }
         else if (mode.contains("VPSPSCAN")) {
-            total.append("process.db_client.VpspScanParameters.doSelectiveUpload = cms.bool(True)\n");
-            total.append("process.db_client.VpspScanParameters.vetoModules = cms.bool(");
-            total.append(sveto);
-            total.append(")\n");
-            total.append("process.db_client.VpspScanParameters.fedMaskVector = cms.vuint32(");
-            for (int i = 0; i < feds.size(); i++) {
-                total.append(feds[i]->data(0).toString());
-                if (i < feds.size()-1) total.append(",");
-            }
-            total.append(")\n");
+	  total.append("process.db_client.VpspScanParameters.doSelectiveUpload = cms.bool(True)\n");
+	  total.append("process.db_client.VpspScanParameters.vetoModules = cms.bool(");
+	  total.append(sveto);
+	  total.append(")\n");
+	  total.append("process.db_client.VpspScanParameters.fedMaskVector = cms.vuint32(");
+	  for (int i = 0; i < feds.size(); i++) {
+	    total.append(feds[i]->data(0).toString());
+	    if (i < feds.size()-1) total.append(",");
+	  }
+	  total.append(")\n");
         }
     }
 

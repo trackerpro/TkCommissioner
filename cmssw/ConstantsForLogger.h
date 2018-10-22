@@ -1,4 +1,3 @@
-// Last commit: $Id: ConstantsForLogger.h,v 1.6 2009/02/10 21:45:54 lowette Exp $
 
 #ifndef ConstantsForLogger_H
 #define ConstantsForLogger_H

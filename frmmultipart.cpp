@@ -49,6 +49,7 @@ void MultiPart::prepareRunTypes() {
     cmbRunType->insertItem(1, "PEDESTAL");
     cmbRunType->insertItem(2, "GAINSCAN");
     cmbRunType->insertItem(3, "VPSPSCAN");
+    cmbRunType->insertItem(4, "CALIBRATION_SCAN");
 
 }
 

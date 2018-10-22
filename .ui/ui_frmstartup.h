@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'frmstartup.ui'
 **
-** Created: Tue May 8 15:28:16 2018
+** Created: Mon Oct 22 16:28:21 2018
 **      by: Qt User Interface Compiler version 4.8.2
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
@@ -147,7 +147,7 @@ public:
         verticalLayout_7->setObjectName(QString::fromUtf8("verticalLayout_7"));
         btnPrepareGlobal = new QPushButton(Startup);
         btnPrepareGlobal->setObjectName(QString::fromUtf8("btnPrepareGlobal"));
-        btnPrepareGlobal->setEnabled(true);
+        btnPrepareGlobal->setEnabled(false);
 
         verticalLayout_7->addWidget(btnPrepareGlobal);
 

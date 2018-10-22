@@ -1,4 +1,3 @@
-// Last commit: $Id: ConstantsForCablingSource.h,v 1.3 2009/02/10 21:45:54 lowette Exp $
 
 #ifndef ConstantsForCablingSource_H
 #define ConstantsForCablingSource_H

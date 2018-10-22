@@ -1,7 +1,7 @@
 /****************************************************************************
 ** Meta object code from reading C++ file 'frmprepareglobal.h'
 **
-** Created: Tue May 8 15:29:22 2018
+** Created: Mon Oct 22 16:29:20 2018
 **      by: The Qt Meta Object Compiler version 63 (Qt 4.8.2)
 **
 ** WARNING! All changes made in this file will be lost!
