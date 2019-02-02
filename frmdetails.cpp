@@ -412,7 +412,7 @@ void SelectionDetails::on_btnShowTrend_clicked() {
 
 		if (plotvar == "ANALYSISTIMING.TickHeight")  {
                   plotvar = "( case when ANALYSISTIMING.HEIGHT = -131070 then 65535 else ANALYSISTIMING.HEIGHT end)";
-		}  
+		}
 
 		queryss << "select viewdevice.fecslot, viewdevice.ringslot, viewdevice.ccuaddress,viewdevice.i2cchannel, "
 			<< qPrintable(plotvar)      << ", runnumber, starttime "
@@ -428,8 +428,8 @@ void SelectionDetails::on_btnShowTrend_clicked() {
 	      }		
 	    }
 
-	    else {
-
+	    else if(runtype == "TIMING") {
+	      
               if (plotvar == "ANALYSISTIMING.TickHeight")  {
 		plotvar = "( case when ANALYSISTIMING.HEIGHT = -131070 then 65535 else ANALYSISTIMING.HEIGHT end)";
               }  

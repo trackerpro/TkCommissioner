@@ -368,7 +368,7 @@ QString TreeBuilder::loadAnalysis(const QRunId& pair, bool useCache) { // load a
       analysisType  .push_back(query.value(1).toString());
       resultCounter++;
     }
-
+    
     if( query.lastError().isValid() ) {
       if(Debug::Inst()->getEnabled()) qDebug() << qPrintable(query.lastError().text());
     }
@@ -414,11 +414,12 @@ void TreeBuilder::fillTree(TTree* tree, std::string runType, const std::string& 
         return;
     }
  
+    std::cout<<runType<<" "<<theQuery<<std::endl;
+    
     BaseQuery myQueryStruct2;
     myQueryStruct2.setExtendedQuery(runType);
-      
-    QVector<std::pair<std::string, Base_Type*> >::const_iterator it = myQueryStruct2.query.begin(), itEnd = myQueryStruct2.query.end();    
-      
+    
+    QVector<std::pair<std::string, Base_Type*> >::const_iterator it = myQueryStruct2.query.begin(), itEnd = myQueryStruct2.query.end();          
     for(; it != itEnd; ++it) {
         const char* branchstr = it->first.c_str();
         QString bookingstr = QString("Booking branch ") + QString(branchstr) + QString(" of type ");
@@ -830,7 +831,7 @@ std::string TreeBuilder::getQuery(const QString& analysisType) {
                 << " ANALYSISCALIBRATION.SMEARING     Smearing,"
                 << " ANALYSISCALIBRATION.CHI2         Chi2,"
                 << " ANALYSISCALIBRATION.DECONVMODE   DeconvMode,"
-                << " ANALYSISCALIBRATION.ISVALID      IsValid,"
+                << " ANALYSISCALIBRATION.ISVALID      IsValid "
                 << " from"
                 << " ANALYSISCALIBRATION join"
                 << " ANALYSIS on ANALYSISCALIBRATION.ANALYSISID = ANALYSIS.ANALYSISID join"
@@ -845,7 +846,7 @@ std::string TreeBuilder::getQuery(const QString& analysisType) {
                 << " DEVICE b on b.HYBRIDID = HYBRID.HYBRIDID          join"
                 << " DCU      on b.DEVICEID = DCU.DEVICEID             left outer join"
                 << " tk_fibers tkf on DCU.DCUHARDID = tkf.dcuid      and"
-                << " mod( ANALYSISPEDESTALS.FECHAN,3) = mod(fiber,3) order by DeviceId";
+                << " mod(ANALYSISCALIBRATION.FECHAN,3) = mod(fiber,3) order by DeviceId";
     } 
 
     else {

@@ -695,9 +695,10 @@ void DBUpload::on_btnUpload_clicked() {
     runTypeMap["GAINSCAN"]  = "OptoScanParameters";
     runTypeMap["VPSPSCAN"]  = "VpspScanParameters";
     runTypeMap["SCOPE"]     = "DaqScopModeParameters";
-    runTypeMap["CALIBRATION_SCAN"]  = "CalibrationParameters";
+    runTypeMap["CALIBRATIONSCANPEAK"]  = "CalibrationParameters";
+    runTypeMap["CALIBRATIONSCANDECO"]  = "CalibrationParameters";
     runTypeMap["CALIBRATION"]  = "CalibrationParameters";
-    runTypeMap["CALIBRATION_DECO"]  = "CalibrationParameters";
+    runTypeMap["CALIBRATIONDECO"]  = "CalibrationParameters";
     
     QMap<unsigned,unsigned> uploadMap;
     QMap<unsigned, unsigned>::const_iterator ins_iter = addLevelMap.constBegin();
@@ -710,7 +711,7 @@ void DBUpload::on_btnUpload_clicked() {
       uploadMap[ins_iter.key()] = ins_iter.value();
       ++ins_iter;
     }
-    
+
     if (chkSkip->isChecked() && uploadMap.size() > 0) {
       if (runTypeMap.contains(analysisType)) {
 	QString runtypestr = "process.db_client.";
@@ -816,13 +817,13 @@ void DBUpload::on_btnUpload_clicked() {
 	}
       }
     }
-    
+
     QFile outfile("/opt/cmssw/scripts/selectiveupload_template.py");
     outfile.open(QIODevice::WriteOnly | QIODevice::Text);
     QTextStream outstream(&outfile);
     outstream << total;
     outfile.close();
-    
+
     if(Debug::Inst()->getEnabled()) qDebug() << total;
     
     QStringList commandArgs;
@@ -835,6 +836,8 @@ void DBUpload::on_btnUpload_clicked() {
     uploadString = "true";
     uploadAnalString = "true";
     useClientString="true";
+    if(analysisType.contains("CALIBRATIONSCAN"))
+      useClientString="false";
     saveClientString="true";
     disableModulesString="false";
     
@@ -851,7 +854,7 @@ void DBUpload::on_btnUpload_clicked() {
     
     TkTerminal* terminal = new TkTerminal();
     if (runs.size() > 0) terminal->startProcess("/opt/cmssw/scripts/run_analysis_selup_new.sh", commandArgs);
-    else                 terminal->startProcess("/opt/cmssw/scripts/run_analysis_selup.sh", commandArgs);
+    else                 terminal->startProcess("/opt/cmssw/scripts/run_analysis_selup_new.sh", commandArgs);
     if (terminal->didStartFail()) delete terminal;
     else emit showTabSignal(terminal, "Run Analysis");
   }

@@ -132,7 +132,7 @@
        <item>
         <widget class="QPushButton" name="btnPrepareGlobal">
          <property name="enabled">
-          <bool>false</bool>
+          <bool>true</bool>
          </property>
          <property name="text">
           <string>Prepare Global Running State</string>
@@ -177,6 +177,9 @@
         <widget class="QCheckBox" name="chkUploadAnalysis">
          <property name="text">
           <string>Upload to Analysis DB</string>
+         </property>
+         <property name="enabled">
+          <bool>true</bool>
          </property>
         </widget>
        </item>
