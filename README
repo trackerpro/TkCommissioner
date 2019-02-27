@@ -1,12 +1,25 @@
-TkCommissioner v2.0
--------------------
+-----------------------------
+TkCommissioner for CC7 at P5
+-----------------------------
 
 This is the updated version of the TkCommissioner tool used for the commissioning of the CMS silicon strip tracker.
 
-Brief highlights of new features : 
-- Improved channel selection in plots
-- Ability to plot the current and last O2O'ed states
-- Ability to choose a different run type as a reference run
-- Interactive tracker map
-- FED map with the ability to select FEDs and perform a selective upload
-- Trends plot
+###### Installation procedure
+
+Prerequisites:
+
+	sudo yum install qt.x86_64
+	sudo yum install qt-devel.x86_64
+	sudo yum install root.x86_64
+	sudo yum install root-gui-qt.x86_64
+	sudo yum install qt-mysql.x86_64
+	
+Temporary hack: no QT drivers for Oracle OCI are available in the standard RPMs, therefore they are copied by hand from the older release of tkCommissioner
+	
+	sudo scp /opt/cmssw/shifter/avartak/qtRoot/qt-everywhere-opensource-src-4.8.2/plugins/sqldrivers/libqsqloci.so /usr/lib64/qt4/plugins/sqldrivers/ 
+	sudo scp /opt/xdaq/lib/libclntsh.so.12.1 /opt/xdaq/lib/libclntsh.so.11.1
+
+Download and compile tkCommissioner:
+	git clone git@github.com:trackerpro/TkCommissioner.git -b newCommissioner_cc7_developments 
+	qmake-qt4
+	make		
