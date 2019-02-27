@@ -7,7 +7,7 @@ This is the updated version of the TkCommissioner tool used for the commissionin
 ###### Installation procedure
 
 Prerequisites:
-
+      
        sudo yum install qt.x86_64
        sudo yum install qt-devel.x86_64
        sudo yum install root.x86_64
@@ -20,6 +20,7 @@ Temporary hack: no QT drivers for Oracle OCI are available in the standard RPMs,
        sudo scp /opt/xdaq/lib/libclntsh.so.12.1 /opt/xdaq/lib/libclntsh.so.11.1
 
 Download and compile tkCommissioner:
+
        git clone git@github.com:trackerpro/TkCommissioner.git -b newCommissioner_cc7_developments 
        qmake-qt4
        make		

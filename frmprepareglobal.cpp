@@ -401,28 +401,28 @@ void PrepareGlobal::displayStatus(int newStatus ) {
     
     switch (newStatus) {
     case RESULT_ERROR:
-	icon_name = "/opt/cmssw/shifter/avartak/qtRoot/NewCommissioningGui/Stable/TkCommissioner/images/round_error.png";
+	icon_name = "images/round_error.png";
 	//statusMessage = "Last O2O upload does not correspond to this configuration";
 	break;
     case RESULT_UNKNOWN:
-	icon_name = "/opt/cmssw/shifter/avartak/qtRoot/NewCommissioningGui/Stable/TkCommissioner/images/round_question.png";
+	icon_name = "images/round_question.png";
 	//statusMessage = "ERROR: I encountered an unexpected problem. Please check the command line for possible detailed error messages";
 	break;
     case RESULT_OK:
-	icon_name = "/opt/cmssw/shifter/avartak/qtRoot/NewCommissioningGui/Stable/TkCommissioner/images/round_ok.png";
+	icon_name = "images/round_ok.png";
 	// statusMessage = "Last O2O upload corresponds to this configuration";
 	// statusMessage = "Readout configuration appears to be ok";
 	break;
     case RESULT_ALMOST_OK:
-	icon_name = "/opt/cmssw/shifter/avartak/qtRoot/NewCommissioningGui/Stable/TkCommissioner/images/round_almost_ok.png";
+	icon_name = "images/round_almost_ok.png";
 	//statusMessage = "Partitions are in correct state, waiting for O2O confirmation";
 	break;
     case RESULT_WARNING:
-      icon_name = "/opt/cmssw/shifter/avartak/qtRoot/NewCommissioningGui/Stable/TkCommissioner/images/triangle_attention.png";
+      icon_name = "images/triangle_attention.png";
       //statusMessage = "This combination of Mode/Supermode and Readroute is NOT recommended, be sure that you really want this configuration!";
       break;
     default:
-	icon_name = "/opt/cmssw/shifter/avartak/qtRoot/NewCommissioningGui/Stable/TkCommissioner/images/round_question.png";
+	icon_name = "images/round_question.png";
 	if(Debug::Inst()->getEnabled()) qDebug() << "ERROR in PrepareGlobal::displayStatus unexpected status\n";
 	break;
     }
@@ -438,25 +438,25 @@ void PrepareGlobal::displayStatus(int newStatus, const int& nextRunNumber, const
     
     switch (newStatus) {
     case RESULT_ERROR:
-	icon_name = "/opt/cmssw/shifter/avartak/qtRoot/NewCommissioningGui/Stable/TkCommissioner/images/round_error.png";
+	icon_name = "images/round_error.png";
 	statusMessage = "Last O2O upload does not correspond to this configuration";
 	break;
     case RESULT_UNKNOWN:
-	icon_name = "/opt/cmssw/shifter/avartak/qtRoot/NewCommissioningGui/Stable/TkCommissioner/images/round_question.png";
+	icon_name = "images/round_question.png";
 	statusMessage = "ERROR: I encountered an unexpected problem. Please check the command line for possible detailed error messages";
 	break;
     case RESULT_OK:
-	icon_name = "/opt/cmssw/shifter/avartak/qtRoot/NewCommissioningGui/Stable/TkCommissioner/images/round_ok.png";
+	icon_name = "images/round_ok.png";
 	statusMessage = "Last O2O upload corresponds to this configuration";
 	allowO2O = false;
 	break;
     case RESULT_ALMOST_OK:
-	icon_name = "/opt/cmssw/shifter/avartak/qtRoot/NewCommissioningGui/Stable/TkCommissioner/images/round_almost_ok.png";
+	icon_name = "images/round_almost_ok.png";
 	statusMessage = "Partition(s) are in correct state, waiting for O2O confirmation";
 	allowO2O = false;
 	break;
     default:
-	icon_name = "/opt/cmssw/shifter/avartak/qtRoot/NewCommissioningGui/Stable/TkCommissioner/images/round_question.png";
+	icon_name = "images/round_question.png";
 	if(Debug::Inst()->getEnabled()) qDebug() << "ERROR in PrepareGlobal::displayStatus unexpected status\n";
 	break;
     }

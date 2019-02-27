@@ -509,7 +509,7 @@ public:
         sizePolicy5.setHeightForWidth(btnPrintToFile->sizePolicy().hasHeightForWidth());
         btnPrintToFile->setSizePolicy(sizePolicy5);
         QIcon icon;
-        icon.addFile(QString::fromUtf8("../../../../../../../../../opt/cmssw/shifter/avartak/qtRoot/NewCommissioningGui/Development/NewCommissioner/images/Save-as-icon.png"), QSize(), QIcon::Normal, QIcon::Off);
+        icon.addFile(QString::fromUtf8("images/Save-as-icon.png"), QSize(), QIcon::Normal, QIcon::Off);
         btnPrintToFile->setIcon(icon);
 
         verticalLayout_11->addWidget(btnPrintToFile);

@@ -79,8 +79,8 @@ void Startup::addItem(QStandardItemModel* model, const QString &first, const QSt
         firstItem->setBackground(QBrush(Qt::gray));
         firstItem->setToolTip(tr("Run marked as bad in database"));
     }
-    if ( analyzed && isRunItem) firstItem->setIcon(QIcon("/opt/cmssw/shifter/avartak/qtRoot/NewCommissioningGui/Stable/TkCommissioner/images/check-icon.png"));
-    if (!analyzed && isRunItem) firstItem->setIcon(QIcon("/opt/cmssw/shifter/avartak/qtRoot/NewCommissioningGui/Stable/TkCommissioner/images/cross-icon.png"));
+    if ( analyzed && isRunItem) firstItem->setIcon(QIcon("images/check-icon.png"));
+    if (!analyzed && isRunItem) firstItem->setIcon(QIcon("images/cross-icon.png"));
     list.append(firstItem);
 
     QStandardItem* secondItem = new QStandardItem(second);
@@ -248,7 +248,7 @@ void Startup::on_btnAnalyze_clicked() {
     QStringList runs = fffdir.entryList(runFilter, QDir::Dirs);
 
     if (runs.size() > 0) terminal->startProcess("/opt/cmssw/scripts/run_analysis_new.sh", commandArgs);
-    else                 terminal->startProcess("/opt/cmssw/scripts/run_analysis.sh", commandArgs);
+    else                 terminal->startProcess("/opt/cmssw/scripts/run_analysis_new.sh", commandArgs);
     if (terminal->didStartFail()) delete terminal;
     else emit showTabSignal(terminal, "Run Analysis");
 }

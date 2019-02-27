@@ -54,7 +54,7 @@ int main(int argc, char ** argv) {
     DbConnection::Inst()->connectDb(std::string(confDb));
 
     // Splash screen at start up
-    QPixmap pixmap("/opt/cmssw/shifter/avartak/qtRoot/NewCommissioningGui/Stable/TkCommissioner/images/slide_TIB_lights2.png"); 
+    QPixmap pixmap("images/slide_TIB_lights2.png");
     QSplashScreen *splash = new QSplashScreen( pixmap );
 
     // Print the text logo

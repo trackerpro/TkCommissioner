@@ -68,7 +68,7 @@
        </property>
        <property name="icon">
         <iconset>
-         <normaloff>../../../../../../../../../opt/cmssw/shifter/avartak/qtRoot/NewCommissioningGui/Development/NewCommissioner/images/Save-as-icon.png</normaloff>../../../../../../../../../opt/cmssw/shifter/avartak/qtRoot/NewCommissioningGui/Development/NewCommissioner/images/Save-as-icon.png</iconset>
+         <normaloff>images/Save-as-icon.png</normaloff>images/Save-as-icon.png</iconset>
        </property>
       </widget>
      </item>

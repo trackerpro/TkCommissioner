@@ -107,13 +107,13 @@ View::View(const QString &, QWidget *parent, double minv, double maxv)
     zoomInIcon->setAutoRepeat(true);
     zoomInIcon->setAutoRepeatInterval(33);
     zoomInIcon->setAutoRepeatDelay(0);
-    zoomInIcon->setIcon(QPixmap("/opt/cmssw/shifter/avartak/qtRoot/NewCommissioningGui/Stable/TkCommissioner/images/zoomin.png"));
+    zoomInIcon->setIcon(QPixmap("images/zoomin.png"));
     zoomInIcon->setIconSize(iconSize);
     QToolButton *zoomOutIcon = new QToolButton;
     zoomOutIcon->setAutoRepeat(true);
     zoomOutIcon->setAutoRepeatInterval(33);
     zoomOutIcon->setAutoRepeatDelay(0);
-    zoomOutIcon->setIcon(QPixmap("/opt/cmssw/shifter/avartak/qtRoot/NewCommissioningGui/Stable/TkCommissioner/images/zoomout.png"));
+    zoomOutIcon->setIcon(QPixmap("images/zoomout.png"));
     zoomOutIcon->setIconSize(iconSize);
     zoomSlider = new QSlider;
     zoomSlider->setMinimum(0);
@@ -159,7 +159,7 @@ View::View(const QString &, QWidget *parent, double minv, double maxv)
     releaseButton->setText(tr("Release"));
 
     printButton = new QToolButton;
-    printButton->setIcon(QPixmap("/opt/cmssw/shifter/avartak/qtRoot/NewCommissioningGui/Stable/TkCommissioner/images/fileprint.png"));
+    printButton->setIcon(QPixmap("images/fileprint.png"));
 
     sbMin = new QDoubleSpinBox;
     sbMax = new QDoubleSpinBox;

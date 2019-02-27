@@ -237,7 +237,7 @@ void FedMap::on_btnZoomOut_clicked() {
 }
 
 void FedMap::on_btnUpload_clicked() {
-    QFile file("/opt/cmssw/scripts/analysis_template_test.py");
+    QFile file("/opt/cmssw/scripts/analysis_template_new_cfg.py");
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) return;
     
     QByteArray total;
@@ -342,7 +342,7 @@ void FedMap::on_btnUpload_clicked() {
 
     if (performUpload) {
         TkTerminal* terminal = new TkTerminal();
-        terminal->startProcess("/opt/cmssw/scripts/run_analysis_test.sh", commandArgs);
+        terminal->startProcess("/opt/cmssw/scripts/run_analysis_selup_new.sh", commandArgs);
         if (terminal->didStartFail()) delete terminal;
         else emit showTabSignal(terminal, "Run Analysis");
     }

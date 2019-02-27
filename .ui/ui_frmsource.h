@@ -83,7 +83,7 @@ public:
         btnPrint = new QPushButton(SourceDisplay);
         btnPrint->setObjectName(QString::fromUtf8("btnPrint"));
         QIcon icon;
-        icon.addFile(QString::fromUtf8("../../../../../../../../../opt/cmssw/shifter/avartak/qtRoot/NewCommissioningGui/Development/NewCommissioner/images/Save-as-icon.png"), QSize(), QIcon::Normal, QIcon::Off);
+        icon.addFile(QString::fromUtf8("images/Save-as-icon.png"), QSize(), QIcon::Normal, QIcon::Off);
         btnPrint->setIcon(icon);
 
         verticalLayout->addWidget(btnPrint);
