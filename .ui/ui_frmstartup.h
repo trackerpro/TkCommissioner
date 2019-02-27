@@ -1,8 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'frmstartup.ui'
 **
-** Created: Mon Oct 22 16:28:21 2018
-**      by: Qt User Interface Compiler version 4.8.2
+** Created by: Qt User Interface Compiler version 4.8.7
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
 ********************************************************************************/
@@ -147,7 +146,7 @@ public:
         verticalLayout_7->setObjectName(QString::fromUtf8("verticalLayout_7"));
         btnPrepareGlobal = new QPushButton(Startup);
         btnPrepareGlobal->setObjectName(QString::fromUtf8("btnPrepareGlobal"));
-        btnPrepareGlobal->setEnabled(false);
+        btnPrepareGlobal->setEnabled(true);
 
         verticalLayout_7->addWidget(btnPrepareGlobal);
 
@@ -172,6 +171,7 @@ public:
 
         chkUploadAnalysis = new QCheckBox(Startup);
         chkUploadAnalysis->setObjectName(QString::fromUtf8("chkUploadAnalysis"));
+        chkUploadAnalysis->setEnabled(true);
 
         verticalLayout_7->addWidget(chkUploadAnalysis);
 

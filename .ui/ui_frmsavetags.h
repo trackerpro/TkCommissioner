@@ -1,8 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'frmsavetags.ui'
 **
-** Created: Mon Oct 22 16:28:21 2018
-**      by: Qt User Interface Compiler version 4.8.2
+** Created by: Qt User Interface Compiler version 4.8.7
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
 ********************************************************************************/

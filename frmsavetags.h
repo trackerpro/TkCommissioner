@@ -242,10 +242,8 @@ class TagUpload : public QDialog, private Ui::TagUpload {
                     progress.setValue(i);
                     if (progress.wasCanceled()) break;
                     
-                    int ticketId = 0;
                     int localDeviceId = tagsModel->item(i, 0)->text().toInt();
-                    
-                    
+                                        
                     if(closeTicket_ && hasOpenTicket) {
                         QString str = "CLOSED:" + tagsModel->item(i, 1)->text();
                         if(hasCommentInRun && nrOpenTickets == 1) deleteTicket(runNumber_, localDeviceId, tagDescription_.toStdString().c_str());
@@ -263,7 +261,7 @@ class TagUpload : public QDialog, private Ui::TagUpload {
                             if(hasCommentInRun) updateComment(runNumber_,localDeviceId, tagDescription_.toStdString().c_str(), qPrintable(tagsModel->item(i, 1)->text()), text.toStdString().c_str());
                             else insertComment(runNumber_,localDeviceId, tagDescription_.toStdString().c_str(), qPrintable(tagsModel->item(i, 1)->text()), text.toStdString().c_str());
                         } 
-                        else ticketId = openTicket(runNumber_,localDeviceId, tagDescription_.toStdString().c_str(), qPrintable(tagsModel->item(i, 1)->text()), text.toStdString().c_str() );
+                        else openTicket(runNumber_,localDeviceId, tagDescription_.toStdString().c_str(), qPrintable(tagsModel->item(i, 1)->text()), text.toStdString().c_str() );
                     }
                     ++i;
                 }

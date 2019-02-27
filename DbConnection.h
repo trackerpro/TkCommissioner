@@ -25,8 +25,8 @@ class DbConnection {
          * constructor
          */
         DbConnection():
-            dbConnection_(QSqlDatabase::addDatabase("QOCI")), 
-            dbConnected_(false)
+	dbConnection_(QSqlDatabase::addDatabase("QOCI")), 
+	  dbConnected_(false)
         { 
         }
 

@@ -15,7 +15,7 @@
 #include <QVector>
 #include <QPair>
 #include <QString>
-
+#include <QtSql>
 
 TreeBuilder* TreeBuilder::pInstance = 0;
 

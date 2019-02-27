@@ -11,6 +11,9 @@
 // TkCommissioiner UI
 #include "frmcommissioner.h"
 
+#include <unistd.h>
+#include <iostream>
+
 int main(int argc, char ** argv) {
 
     // Boolean to decide whether or not to show the splash screen    

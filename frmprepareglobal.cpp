@@ -1187,7 +1187,7 @@ int PrepareGlobal::showCurrentState() {
   pal.setColor(QPalette::Background, QColor(Qt::white));
   dialogLabel->setPalette(pal);
   dialogLabel->setScaledContents ( true );
-  QString stringBEGIN = QString::QString("<qt>"
+  QString stringBEGIN = QString("<qt>"
                      "<center><font color=\"red\", size=+2><b>CHANGE TO READOUT CONFIGURATION</b></font></center>"
                      "<center><font color=\"red\", size=+2><b>(PLEASE CHECK CAREFULLY!)</b></font></center>"
                      "<hr>"
@@ -1196,14 +1196,14 @@ int PrepareGlobal::showCurrentState() {
                      "<th>MODE/SUPERMODE&nbsp;(old)</th><th>MODE/SUPERMODE&nbsp;(new) </th></tr>");
   std::vector<QString> stringPart;
   for(size_t i = 0; i < 4; ++i ) {
-    stringPart.push_back(QString::QString("<td>%1</td><td>%2</td><td bgcolor=%4>%3</td>" ) );
+    stringPart.push_back(QString("<td>%1</td><td>%2</td><td bgcolor=%4>%3</td>" ) );
   }
 
-  QString stringEND  = QString::QString("</table></qt>");
+  QString stringEND  = QString("</table></qt>");
 
   QString string = stringBEGIN;
   for(size_t i = 1; i <=4; ++i ) {
-    string += QString::QString("<tr>");
+    string += QString("<tr>");
     QString partition  = configuration[i]->currentText(),
       readRoute        = configuration[i+4]->currentText(),
       oldReadRoute     = getReadRoute(iOldConfiguration[i+4]),
@@ -1215,7 +1215,7 @@ int PrepareGlobal::showCurrentState() {
     } else {
       //std::cout << "Partition inactive, not displaying" << std::endl;
     }
-    string += QString::QString("</tr><hr>");
+    string += QString("</tr><hr>");
   }
 
   string += stringEND;

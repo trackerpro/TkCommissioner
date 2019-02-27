@@ -1,8 +1,17 @@
-include("$(ROOTSYS)/include/rootcint.pri")
-
 OBJECTS_DIR = .obj
 MOC_DIR     = .moc
 UI_DIR      = .ui
+  
+INCLUDEPATH += /usr/include/root
+INCLUDEPATH += /opt/xdaq/include
+
+QT         += sql
+QT         += qt3support
+
+LIBS += -L/usr/lib64/root -lGui -lCore -lImt -lRIO -lNet -lHist -lGraf -lGraf3d -lGpad -lROOTDataFrame -lROOTVecOps -lTree -lTreePlayer -lRint -lPostscript -lMatrix -lPhysics -lMathCore -lThread -lMultiProc -lGQt -lQtRoot -pthread -lm -ldl -rdynamic
+LIBS += -L/opt/xdaq/lib -locci -lclntsh -lociei
+
+QMAKE_CXXFLAGS += -pthread -std=c++11 -m64 
 
 HEADERS +=  Debug.h \
             DbConnection.h \

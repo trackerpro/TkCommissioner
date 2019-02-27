@@ -485,7 +485,7 @@ void SelectionDetails::on_btnSave_clicked() {
     curDir = getenv("PWD");
     QString saveFileName = (QFileDialog::getSaveFileName(this, tr("Save Image"), curDir, tr("Text files (*.txt)")));
     if (Debug::Inst()->getEnabled()) qDebug() << saveFileName;
-    if (saveFileName == NULL) return;
+    if (saveFileName.isEmpty() or saveFileName.isNull()) return;
     else {
         std::ofstream file_out(qPrintable(saveFileName), std::ios::out);
         file_out << "Detid" << " and " << "I2CAddress" << std::endl; 

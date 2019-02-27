@@ -215,7 +215,7 @@ void SourceDisplay::on_btnPrint_clicked() {
     curDir = getenv("PWD");
     QString saveFileName = (QFileDialog::getSaveFileName(this, tr("Save Image"), curDir, tr("Image files (*.png *.jpg)")));
     if (Debug::Inst()->getEnabled()) qDebug() << saveFileName;
-    if (saveFileName == NULL) return;
+    if (saveFileName.isEmpty() or saveFileName.isNull()) return;
     else qtCanvas->GetCanvas()->Print(saveFileName.toStdString().c_str());
 }
 

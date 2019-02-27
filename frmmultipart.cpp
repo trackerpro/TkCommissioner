@@ -84,10 +84,10 @@ void MultiPart::prepareRunList(const QString& partitionName, const QString& runT
 }
 
 void MultiPart::prepareRuns() {
-    prepareRunList(cmbTibPartition->currentText() , QString::QString(cmbRunType->currentText()), cmbRunTib);
-    prepareRunList(cmbTobPartition->currentText() , QString::QString(cmbRunType->currentText()), cmbRunTob);
-    prepareRunList(cmbTecpPartition->currentText(), QString::QString(cmbRunType->currentText()), cmbRunTecp);	
-    prepareRunList(cmbTecmPartition->currentText(), QString::QString(cmbRunType->currentText()), cmbRunTecm);
+    prepareRunList(cmbTibPartition->currentText() , QString(cmbRunType->currentText()), cmbRunTib);
+    prepareRunList(cmbTobPartition->currentText() , QString(cmbRunType->currentText()), cmbRunTob);
+    prepareRunList(cmbTecpPartition->currentText(), QString(cmbRunType->currentText()), cmbRunTecp);	
+    prepareRunList(cmbTecmPartition->currentText(), QString(cmbRunType->currentText()), cmbRunTecm);
 }
 
 void MultiPart::prepareDbTable(const QString& part, const QString& run) {

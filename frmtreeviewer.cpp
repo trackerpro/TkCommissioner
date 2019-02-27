@@ -617,7 +617,7 @@ void TreeViewer::on_btnPrintToFile_clicked() {
     curDir = getenv("PWD");
     QString saveFileName = (QFileDialog::getSaveFileName(this, tr("Save Image"), curDir, tr("Image files (*.png *.jpg)")));
     if (Debug::Inst()->getEnabled()) qDebug() << saveFileName;
-    if (saveFileName == NULL) return;
+    if (saveFileName.isNull() or saveFileName.isEmpty()) return;
     else getCanvas()->Print(saveFileName.toStdString().c_str());
 }
 
