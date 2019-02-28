@@ -40,6 +40,7 @@ class TkTerminalDialog : public QDialog, private Ui::TkTerminalDialog {
             setupUi(this);
             btnDone->setEnabled(false);
             correctProcess_ = false;
+	    // textOutput->setCenterOnScroll(true);
         }
 
         ~TkTerminalDialog() {
@@ -57,8 +58,10 @@ class TkTerminalDialog : public QDialog, private Ui::TkTerminalDialog {
                 QByteArray newChunk;
                 newChunk = thisProcess_->readAllStandardOutput();
                 QString newTextString(newChunk);
-                textOutput->setText(textOutput->text()+newTextString);
-                textOutput->scrollToBottom();
+                //textOutput->setText(textOutput->text()+newTextString);
+		textOutput->append(newTextString);
+		//textOutput->scrollToBottom();
+		textOutput->ensureCursorVisible();
             }
         }
 

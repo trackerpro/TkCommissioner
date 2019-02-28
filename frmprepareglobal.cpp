@@ -429,7 +429,7 @@ void PrepareGlobal::displayStatus(int newStatus ) {
     
     if(statusMessage != "")
       statusBar()->showMessage(statusMessage);
-    validReadOut->setPixmap(qPixmapFromMimeSource(icon_name));    
+    validReadOut->setPixmap(QPixmap(icon_name));    
 }
 
 void PrepareGlobal::displayStatus(int newStatus, const int& nextRunNumber, const int& lastIovRunNumber, bool allowO2O ) {
@@ -464,8 +464,8 @@ void PrepareGlobal::displayStatus(int newStatus, const int& nextRunNumber, const
     statusBar()->showMessage(statusMessage);
     linLastIov->setText(QString("%1").arg(lastIovRunNumber));
     linNextRun->setText(QString("%1").arg(nextRunNumber));
-    lblUpdate->setPixmap(qPixmapFromMimeSource(icon_name));
-    validReadOut->setPixmap(qPixmapFromMimeSource(icon_name));
+    lblUpdate->setPixmap(QPixmap(icon_name));
+    validReadOut->setPixmap(QPixmap(icon_name));
     btnSetConf->setEnabled(allowO2O);
 }
 

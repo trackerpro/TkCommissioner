@@ -952,7 +952,7 @@ Global:</string>
             <item row="0" column="0">
              <layout class="QHBoxLayout">
               <item>
-               <widget class="Q3Frame" name="frame3">
+               <widget class="QFrame" name="frame3">
                 <property name="minimumSize">
                  <size>
                   <width>15</width>
@@ -1073,12 +1073,12 @@ Global:</string>
   </widget>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
- <pixmapfunction>qPixmapFromMimeSource</pixmapfunction>
+<!-- <pixmapfunction>qPixmapFromMimeSource</pixmapfunction> -->
  <customwidgets>
   <customwidget>
-   <class>Q3Frame</class>
+   <class>QFrame</class>
    <extends>QFrame</extends>
-   <header>Qt3Support/Q3Frame</header>
+   <header>QFrame</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

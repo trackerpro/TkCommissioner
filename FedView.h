@@ -7,6 +7,8 @@
 #include <QVector>
 #include <QEvent>
 #include <iostream>
+#include <QGraphicsScene>
+#include <QGraphicsTextItem>
 
 namespace fedview {
 

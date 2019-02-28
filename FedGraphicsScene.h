@@ -3,6 +3,8 @@
 
 #include <QtCore>
 #include <QtGui>
+#include <QGraphicsScene>
+#include <QGraphicsSceneMouseEvent>
 
 class FedGraphicsScene : public QGraphicsScene {
 

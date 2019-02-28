@@ -3,6 +3,8 @@
 
 #include <QtCore>
 #include <QtGui>
+#include <QGraphicsSimpleTextItem>
+#include <QGraphicsView>
 
 class FedGraphicsView : public QGraphicsView {
 
