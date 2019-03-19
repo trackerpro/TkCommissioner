@@ -247,8 +247,8 @@ void Startup::on_btnAnalyze_clicked() {
     runFilter << "*run"+runNumber+"*";
     QStringList runs = fffdir.entryList(runFilter, QDir::Dirs);
 
-    if (runs.size() > 0) terminal->startProcess("/opt/cmssw/scripts/run_analysis_new.sh", commandArgs);
-    else                 terminal->startProcess("/opt/cmssw/scripts/run_analysis_new.sh", commandArgs);
+    if (runs.size() > 0) terminal->startProcess("/opt/cmssw/scripts/run_analysis_CC7.sh", commandArgs);
+    else                 terminal->startProcess("/opt/cmssw/scripts/run_analysis_CC7.sh", commandArgs);
     if (terminal->didStartFail()) delete terminal;
     else emit showTabSignal(terminal, "Run Analysis");
 }

@@ -676,7 +676,7 @@ void DBUpload::on_btnUpload_clicked() {
   }  
   else {
    
-    QFile file("/opt/cmssw/scripts/analysis_template_new_cfg.py");
+    QFile file("/opt/cmssw/scripts/analysis_template_CC7_cfg.py");
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) return;
     
     QByteArray total;
@@ -818,7 +818,7 @@ void DBUpload::on_btnUpload_clicked() {
       }
     }
 
-    QFile outfile("/opt/cmssw/scripts/selectiveupload_template.py");
+    QFile outfile("/opt/cmssw/scripts/selectiveupload_template_CC7.py");
     outfile.open(QIODevice::WriteOnly | QIODevice::Text);
     QTextStream outstream(&outfile);
     outstream << total;
@@ -853,8 +853,8 @@ void DBUpload::on_btnUpload_clicked() {
     QStringList runs = fffdir.entryList(runFilter, QDir::Dirs);
     
     TkTerminal* terminal = new TkTerminal();
-    if (runs.size() > 0) terminal->startProcess("/opt/cmssw/scripts/run_analysis_selup_new.sh", commandArgs);
-    else                 terminal->startProcess("/opt/cmssw/scripts/run_analysis_selup_new.sh", commandArgs);
+    if (runs.size() > 0) terminal->startProcess("/opt/cmssw/scripts/run_analysis_selup_CC7.sh", commandArgs);
+    else                 terminal->startProcess("/opt/cmssw/scripts/run_analysis_selup_CC7.sh", commandArgs);
     if (terminal->didStartFail()) delete terminal;
     else emit showTabSignal(terminal, "Run Analysis");
   }

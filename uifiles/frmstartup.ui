@@ -201,6 +201,9 @@
          <property name="text">
           <string>Upload to ConfDB</string>
          </property>
+         <property name="enabled">
+           <bool>false</bool>
+	 </property>
         </widget>
        </item>
        <item>

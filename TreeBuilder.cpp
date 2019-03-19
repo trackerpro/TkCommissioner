@@ -414,8 +414,6 @@ void TreeBuilder::fillTree(TTree* tree, std::string runType, const std::string& 
         return;
     }
  
-    std::cout<<runType<<" "<<theQuery<<std::endl;
-    
     BaseQuery myQueryStruct2;
     myQueryStruct2.setExtendedQuery(runType);
     
