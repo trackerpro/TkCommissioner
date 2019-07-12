@@ -583,8 +583,8 @@ void DBUpload::on_btnUpload_clicked() {
       infoss << "<b>Timing O2O : </b>" << "<br/>";
       infoss << "IOV : " << qPrintable(nextRun) << "<br/>";
       
-      QString partFilename = "/nfshome0/trackerpro/o2o/scripts/TimingO2O_Partitions.py";
-      QString skipFilename = "/nfshome0/trackerpro/o2o/scripts/TimingO2O_SkippedChannels.py";
+      QString partFilename = "/exports/slc7/scripts/TimingO2O_Partitions.py";
+      QString skipFilename = "/exports/slc7/scripts/TimingO2O_SkippedChannels.py";
 
       std::ofstream partFile;
       std::ofstream skipFile;
@@ -644,8 +644,7 @@ void DBUpload::on_btnUpload_clicked() {
 
       QString sveto = (chkVeto->isChecked() ? "0" : "1");
       QStringList commandArgs;
-      commandArgs << "/nfshome0/trackerpro/o2o/scripts/runGainO2O.sh" << sveto << nextRun << partFilename << skipFilename;
-      //commandArgs << "/nfshome0/trackerpro/o2o/scripts/testGainO2O.sh" << sveto << nextRun << partFilename << skipFilename;
+      commandArgs << "/exports/slc7/scripts/runGainO2O.sh" << sveto << nextRun << partFilename << skipFilename;
 
       bool o2oresult = false;
       QProcess* proc = new QProcess(this);
@@ -676,7 +675,7 @@ void DBUpload::on_btnUpload_clicked() {
   }  
   else {
    
-    QFile file("/opt/cmssw/scripts/analysis_template_CC7_cfg.py");
+    QFile file("/exports/slc7/scripts/analysis_template_CC7_cfg.py");
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) return;
     
     QByteArray total;
@@ -818,7 +817,7 @@ void DBUpload::on_btnUpload_clicked() {
       }
     }
 
-    QFile outfile("/opt/cmssw/scripts/selectiveupload_template_CC7.py");
+    QFile outfile("/exports/slc7/scripts/selectiveupload_template_CC7.py");
     outfile.open(QIODevice::WriteOnly | QIODevice::Text);
     QTextStream outstream(&outfile);
     outstream << total;
@@ -853,8 +852,8 @@ void DBUpload::on_btnUpload_clicked() {
     QStringList runs = fffdir.entryList(runFilter, QDir::Dirs);
     
     TkTerminal* terminal = new TkTerminal();
-    if (runs.size() > 0) terminal->startProcess("/opt/cmssw/scripts/run_analysis_selup_CC7.sh", commandArgs);
-    else                 terminal->startProcess("/opt/cmssw/scripts/run_analysis_selup_CC7.sh", commandArgs);
+    if (runs.size() > 0) terminal->startProcess("/exports/slc7/scripts/run_analysis_selup_CC7.sh", commandArgs);
+    else                 terminal->startProcess("/exports/slc7/scripts/run_analysis_selup_CC7.sh", commandArgs);
     if (terminal->didStartFail()) delete terminal;
     else emit showTabSignal(terminal, "Run Analysis");
   }

@@ -221,7 +221,7 @@ void MultiPart::on_btnShow_clicked() {
     currentPartitionName += cmbTecpPartition->currentText()  + "#" + cmbRunTecp->currentText() + "*";
     currentPartitionName += cmbTecmPartition->currentText()  + "#" + cmbRunTecm->currentText();
 
-    tfiles->push_back(QString("/opt/cmssw/shifter/avartak/data/tmp/timingo2otmp_")+QDateTime::currentDateTime().toString("dd_MM_yyyy_hh_mm_ss_zzz")+QString(".root")); 
+    tfiles->push_back(QString("/exports/slc7/tkCommissionerData/tmp/timingo2otmp_")+QDateTime::currentDateTime().toString("dd_MM_yyyy_hh_mm_ss_zzz")+QString(".root")); 
     TreeViewer *treeview = new TreeViewer(tfiles->back());
 
     bool addRunResult = treeview->addRun(currentPartitionName, QString::number(sistrip::MULTIPART), true);

@@ -46,7 +46,7 @@ Startup::Startup(QWidget * parent):
     partitionView->selectRow(0);
 
     QString user = DbConnection::Inst()->dbConnection().userName();
-    if (QString::compare(user, tr("cms_trk_tkcc"), Qt::CaseInsensitive) != 0) {
+    if (QString::compare(user, tr("cms_tracker_tif3"), Qt::CaseInsensitive) != 0) {
         QMessageBox::critical(0, tr("Startup"), tr("You are using a database account which does not have write permissions!\n\nRun flagging will be disabled") );      
         btnMarkBad->setEnabled(false);
     }
@@ -162,7 +162,7 @@ void Startup::on_btnState_clicked() {
     if (cmbState->currentText() == "Select state...") return;
 
     if (Debug::Inst()->getEnabled()) qDebug() << "Creating tree from current state for partition " << qPrintable(currentPartitionName) << "\n";
-    tmpfiles.push_back(QString("/opt/cmssw/shifter/avartak/data/tmp/curstatetmp_")+QDateTime::currentDateTime().toString("dd_MM_yyyy_hh_mm_ss_zzz")+QString(".root")); 
+    tmpfiles.push_back(QString("/exports/slc7/tkCommissionerData/tmp/curstatetmp_")+QDateTime::currentDateTime().toString("dd_MM_yyyy_hh_mm_ss_zzz")+QString(".root")); 
     TreeViewer *treeview = new TreeViewer(tmpfiles.back());
 
     bool addRunResult = false;
@@ -187,7 +187,7 @@ void Startup::on_btnViewResults_clicked() {
     QStandardItem *run = runModel->itemFromIndex(runList.at(0));
     QString runNumber = run->text();
 
-    tmpfiles.push_back(QString("/opt/cmssw/shifter/avartak/data/tmp/analysistmp_")+QDateTime::currentDateTime().toString("dd_MM_yyyy_hh_mm_ss_zzz")+QString(".root")); 
+    tmpfiles.push_back(QString("/exports/slc7/tkCommissionerData/tmp/analysistmp_")+QDateTime::currentDateTime().toString("dd_MM_yyyy_hh_mm_ss_zzz")+QString(".root")); 
     TreeViewer *treeview = new TreeViewer(tmpfiles.back(), chkUseCache->isChecked());
     if (treeview->addRun(currentPartitionName, runNumber, true)) emit showTabSignal(treeview, "Tree View");
 }
@@ -247,8 +247,10 @@ void Startup::on_btnAnalyze_clicked() {
     runFilter << "*run"+runNumber+"*";
     QStringList runs = fffdir.entryList(runFilter, QDir::Dirs);
 
-    if (runs.size() > 0) terminal->startProcess("/opt/cmssw/scripts/run_analysis_CC7.sh", commandArgs);
-    else                 terminal->startProcess("/opt/cmssw/scripts/run_analysis_CC7.sh", commandArgs);
+    std::cout<<"Run analysis scripts with: "<<qPrintable(runNumber)<<" "<<qPrintable(uploadString)<<" "<<qPrintable(uploadAnalString)<<" "<<qPrintable(currentPartitionName)<<" "<<qPrintable(useClientString)<<" "<<qPrintable(disableModulesString)<<" "<<qPrintable(saveClientString)<<std::endl;
+
+    if (runs.size() > 0) terminal->startProcess("/exports/slc7/scripts/run_analysis_CC7.sh", commandArgs);
+    else                 terminal->startProcess("/exports/slc7/scripts/run_analysis_CC7.sh", commandArgs);
     if (terminal->didStartFail()) delete terminal;
     else emit showTabSignal(terminal, "Run Analysis");
 }

@@ -271,7 +271,7 @@ QString TreeBuilder::loadAnalysis(const QRunId& pair, bool useCache) { // load a
 
   if (pair.second == QString::number(sistrip::CURRENTSTATE)) { // current-state download of FED parameters
     std::stringstream filename;
-    filename << "/opt/cmssw/shifter/avartak/data/" << (QString("CURRENTSTATE_")+pair.first+QString(".root")).toStdString();    
+    filename << "/exports/slc7/tkCommissionerData/" << (QString("CURRENTSTATE_")+pair.first+QString(".root")).toStdString();    
     bool res = buildTree(filename.str().c_str(), QString::number(sistrip::CURRENTSTATE),QString::number(sistrip::CURRENTSTATE),QRunId(pair.first,QString::number(sistrip::CURRENTSTATE)),true);
 
     if (Debug::Inst()->getEnabled()) {
@@ -288,7 +288,7 @@ QString TreeBuilder::loadAnalysis(const QRunId& pair, bool useCache) { // load a
 
   else if (pair.second == QString::number(sistrip::LASTO2O)) {
     std::stringstream filename;
-    filename << "/opt/cmssw/shifter/avartak/data/" << (QString("LASTO2O_")+pair.first+QString(".root")).toStdString();
+    filename << "/exports/slc7/tkCommissionerData/" << (QString("LASTO2O_")+pair.first+QString(".root")).toStdString();
 
     bool res = buildTree(filename.str().c_str(), QString::number(sistrip::LASTO2O),QString::number(sistrip::LASTO2O),QRunId(pair.first,QString::number(sistrip::LASTO2O)),true);
     if (Debug::Inst()->getEnabled()) {
@@ -325,7 +325,7 @@ QString TreeBuilder::loadAnalysis(const QRunId& pair, bool useCache) { // load a
       runIds.push_back(QRunId(subparts[0], subparts[1]));
     }
     
-    filename << "/opt/cmssw/shifter/avartak/data/" << filenamestart.toStdString() << (QString("_FOURPARTS.root")).toStdString();      
+    filename << "/exports/slc7/tkCommissionerData/" << filenamestart.toStdString() << (QString("_FOURPARTS.root")).toStdString();      
 
     bool res = buildMultiPartTree(filename.str().c_str(), runIds);
 
@@ -382,14 +382,14 @@ QString TreeBuilder::loadAnalysis(const QRunId& pair, bool useCache) { // load a
   
   if(resultCounter == 1){ // single analysis type
     std::stringstream filename;
-    filename << "/opt/cmssw/shifter/avartak/data/" << analysisType.front().toStdString() << "_" << pair.first.toStdString() << "_" <<  pair.second.toInt() << "_new.root";
+    filename << "/exports/slc7/tkCommissionerData/" << analysisType.front().toStdString() << "_" << pair.first.toStdString() << "_" <<  pair.second.toInt() << "_new.root";
     if(result) result = buildTree(filename.str().c_str(), analysisType.front(), analysisId.front(), pair, useCache);  
     if (result) return QString(filename.str().c_str());
     else return "";
   }
   else {
     std::stringstream filename;    
-    filename << "/opt/cmssw/shifter/avartak/data/" ;
+    filename << "/exports/slc7/tkCommissionerData/" ;
     for(int itype = 0 ; itype < analysisType.size(); itype++) filename << analysisType.at(itype).toStdString() << "_" ;
     filename << pair.first.toStdString() << "_" <<  pair.second.toInt() << "_new.root";
     if (result) result = buildMultiAnalysisTree(filename.str().c_str(), analysisType, analysisId, pair, useCache);  
@@ -932,7 +932,7 @@ bool TreeBuilder::getState(const QString &partitionName, int state) {
     
     if(Debug::Inst()->getEnabled()) qDebug() << "Query done, now booking tree....";
     
-    QString path = "/opt/cmssw/shifter/avartak/data/";
+    QString path = "/exports/slc7/tkCommissionerData/";
     
     QString name = QString("CURRENTSTATE_")+partitionName;
     if (state == sistrip::LASTO2O) name = QString("LASTO2O_")+partitionName;

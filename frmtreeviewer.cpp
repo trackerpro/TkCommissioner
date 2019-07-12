@@ -206,7 +206,7 @@ void TreeViewer::fillSummaryHists(const QString& runNumber) {
     btnShowSummary->setEnabled(false);
     cmbSummaryHists->setEnabled(false);
 
-    TString filePath = Form("/opt/cmssw/Data/%d/SiStripCommissioningClient*.root", runNumber.toInt());
+    TString filePath = Form("/exports/Data/%d/SiStripCommissioningClient*.root", runNumber.toInt());
     TChain chain;
     chain.Add(filePath);
     TObjArray *fileElements=chain.GetListOfFiles();

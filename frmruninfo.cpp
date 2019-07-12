@@ -313,8 +313,8 @@ bool RunInfo::displayRunInfo() {
         std::ofstream partFile;
         std::ofstream skipFile;
 
-        QString partFilename = "/nfshome0/trackerpro/o2o/scripts/TimingO2O_Partitions.py";
-        QString skipFilename = "/nfshome0/trackerpro/o2o/scripts/TimingO2O_SkippedChannels.py";
+        QString partFilename = "/exports/slc7/scripts/TimingO2O_Partitions.py";
+        QString skipFilename = "/exports/slc7/scripts/TimingO2O_SkippedChannels.py";
 
         partFile.open(partFilename.toStdString().c_str());
         skipFile.open(skipFilename.toStdString().c_str());
@@ -326,8 +326,7 @@ bool RunInfo::displayRunInfo() {
         skipFile.close();
 
         QStringList commandArgs;
-        //commandArgs << "/nfshome0/trackerpro/o2o/scripts/testGainO2O.sh" << nextRun << partFilename << skipFilename;
-        commandArgs << "/nfshome0/trackerpro/o2o/scripts/simpletest.sh" << nextRun << partFilename << skipFilename;
+        commandArgs << "/exports/slc7/scripts/simpletest.sh" << nextRun << partFilename << skipFilename;
 
         bool o2oresult = false;
         QProcess* proc = new QProcess(this);

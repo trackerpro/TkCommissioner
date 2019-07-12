@@ -70,14 +70,14 @@ SourceDisplay::~SourceDisplay() {
 
 TFile* SourceDisplay::getClientFile(QString run, QString partition = "") {
 
-  TString filePath = Form("/opt/cmssw/Data/%d/SiStripCommissioningClient*.root", run.toInt());
+  TString filePath = Form("/exports/Data/%d/SiStripCommissioningClient*.root", run.toInt());
   TChain chain;
   TChain chain_2;
   chain.Add(filePath);
   TObjArray *fileElements = chain.GetListOfFiles();
   
   if(fileElements->GetEntries() > 1){ // use the partition to solve ambiguity
-    filePath = Form("/opt/cmssw/Data/%d/SiStripCommissioningClient*%s*.root",run.toInt(),partition.toStdString().c_str());
+    filePath = Form("/exports/Data/%d/SiStripCommissioningClient*%s*.root",run.toInt(),partition.toStdString().c_str());
     chain_2.Add(filePath);
     fileElements = chain_2.GetListOfFiles();    
   }

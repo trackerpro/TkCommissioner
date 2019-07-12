@@ -19,9 +19,8 @@
 #define TECM_ID "TEC-"
 #define O2O_ID "O2O"
 
-#define PREPAREGLOBAL_SCRIPT "/nfshome0/trackerpro/o2o/scripts/prepareGlobal.sh"
-//#define PREPAREGLOBAL_SCRIPT "/nfshome0/trackerpro/o2o/scripts/testDAQO2O.sh"
-#define PREPAREO2OCONFIG_SCRIPT "/nfshome0/trackerpro/o2o/scripts/SiSitrpO2OConfig.py"
+#define PREPAREGLOBAL_SCRIPT "/exports/slc7/scripts/prepareGlobal.sh"
+#define PREPAREO2OCONFIG_SCRIPT "/exports/slc7/scripts/SiSitrpO2OConfig.py"
 
 #define SELECTPARTNAMES "select partitionname, max(o2oid) as o2oid from partition, StateHistory, CurrentState, O2OPartition where StateHistory.partitionid=Partition.partitionId and StateHistory.stateHistoryId=CurrentState.stateHistoryId and Partition.partitionId = O2OPartition.partitionid and SUBDETECTOR = '%1' group by partitionname order by O2OID asc"
 
